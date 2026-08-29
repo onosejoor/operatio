@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// Phase 2: User, Organization, Membership models
+
+// User model
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  name         String
+  passwordHash String
+  emailVerified Boolean @default(false)
+  emailVerificationToken String?
+  emailVerificationExpiresAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  sessions     Session[]
+
+  @@map("users")
+}
+
+// Organization model
+model Organization {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  // monitors will be added in Phase 3
+
+  @@map("organizations")
+}
+
+// Membership model
+model Membership {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String        @db.ObjectId
+  organizationId String        @db.ObjectId
+  role           MembershipRole
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("memberships")
+}
+
+enum MembershipRole {
+  OWNER
+  MEMBER
+}
+
+// Session model for refresh tokens
+model Session {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
