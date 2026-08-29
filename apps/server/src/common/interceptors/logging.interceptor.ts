@@ -17,41 +17,26 @@ export class LoggingInterceptor implements NestInterceptor {
     const { method, url, requestId, userId, organizationId } = request;
     const now = Date.now();
 
-    this.logger.log({
-      message: 'Incoming request',
-      method,
-      url,
-      requestId,
-      userId,
-      organizationId,
-    });
+    this.logger.log(
+      `→ ${method} ${url} [req:${requestId}] [user:${userId ?? '-'}] [org:${organizationId ?? '-'}]`,
+    );
 
     return next.handle().pipe(
       tap({
         next: () => {
           const duration = Date.now() - now;
-          this.logger.log({
-            message: 'Request completed',
-            method,
-            url,
-            requestId,
-            userId,
-            organizationId,
-            duration: `${duration}ms`,
-          });
+          const statusCode = context.switchToHttp().getResponse().statusCode;
+          this.logger.log(
+            `← ${method} ${url} ${statusCode} ${duration}ms [req:${requestId}] [user:${userId ?? '-'}] [org:${organizationId ?? '-'}]`,
+          );
         },
         error: (error) => {
           const duration = Date.now() - now;
-          this.logger.error({
-            message: 'Request failed',
-            method,
-            url,
-            requestId,
-            userId,
-            organizationId,
-            duration: `${duration}ms`,
-            error: error.message,
-          });
+          const statusCode = error?.status ?? error?.statusCode ?? 500;
+          this.logger.error(
+            `✖ ${method} ${url} ${statusCode} ${duration}ms [req:${requestId}] [user:${userId ?? '-'}] [org:${organizationId ?? '-'}] — ${error.message}`,
+            error.stack,
+          );
         },
       }),
     );
