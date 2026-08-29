@@ -18,15 +18,12 @@ export class NotificationService {
     template: T;
     context: EmailTemplateContextMap[T];
   }) {
-    this.logger.log(
-      `Sending email to ${job.to} with template: ${job.template}`,
-    );
+    this.logger.log(`Preparing email with template: ${job.template}`);
 
     const renderTemplate = EMAIL_TEMPLATES[job.template];
     const html = renderTemplate(job.context);
 
-    this.logger.log(`Email subject: ${job.subject}`);
-    this.logger.log(`Email content: ${html}`);
+    this.logger.debug(`Email prepared with subject: ${job.subject}`);
 
     // Example implementation (when nodemailer is added):
     // const transporter = nodemailer.createTransport({

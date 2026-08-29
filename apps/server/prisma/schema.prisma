@@ -22,7 +22,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   memberships  Membership[]
-  sessions     Session[]
+  tokens       Token[]
 
   @@map("users")
 }
@@ -62,8 +62,8 @@ enum MembershipRole {
   MEMBER
 }
 
-// Session model for refresh tokens
-model Session {
+// Refresh-token model
+model Token {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   tokenHash String
@@ -74,5 +74,5 @@ model Session {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
+  @@map("tokens")
 }

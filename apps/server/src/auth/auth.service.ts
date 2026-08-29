@@ -1,17 +1,19 @@
 import {
-  Injectable,
+  BadRequestException,
   ConflictException,
-  UnauthorizedException,
+  Injectable,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import * as argon2 from 'argon2';
+import { MembershipRole } from '@prisma/client';
 import { PrismaService } from '../database/database.service';
 import { NotificationService } from '../notification/notification.service';
 import { AppConfigService } from '../config/service/app-config.service';
-import * as argon2 from 'argon2';
-import { randomBytes } from 'crypto';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { MembershipRole } from '@prisma/client';
+import { RegisterDto } from './dto/register.dto';
+import { TokenPair, TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
@@ -21,39 +23,31 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
     private readonly appConfig: AppConfigService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async register(registerDto: RegisterDto) {
     const { name, email, password } = registerDto;
-
-    // Check if user already exists
+    const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Hash password
     const passwordHash = await argon2.hash(password, {
       type: argon2.argon2id,
       memoryCost: 65536,
       timeCost: 3,
       parallelism: 4,
     });
-
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Generate verification token
     const verificationToken = randomBytes(32).toString('hex');
-    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
+    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const slug = this.generateSlug(name);
 
     try {
-      // Use MongoDB transaction for atomic operations
       const result = await this.prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: {
@@ -66,10 +60,7 @@ export class AuthService {
           select: { name: true, id: true },
         });
         const organization = await tx.organization.create({
-          data: {
-            name,
-            slug,
-          },
+          data: { name, slug },
           select: { id: true },
         });
         const membership = await tx.membership.create({
@@ -84,8 +75,6 @@ export class AuthService {
       });
 
       this.logger.log(`User registered successfully: ${normalizedEmail}`);
-
-      // Send verification email
       await this.notificationService.sendEmail({
         to: normalizedEmail,
         subject: 'Verify your email',
@@ -96,10 +85,8 @@ export class AuthService {
         },
       });
 
-      return {
-        message: 'User Created Successfully',
-      };
-    } catch (error) {
+      return { message: 'User created successfully' };
+    } catch (error: unknown) {
       this.logger.error(
         `Registration failed for email: ${normalizedEmail}`,
         error,
@@ -108,34 +95,50 @@ export class AuthService {
     }
   }
 
+  async verifyEmail(token: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { emailVerificationToken: token },
+      select: { id: true, email: true, emailVerificationExpiresAt: true },
+    });
+
+    if (
+      !user ||
+      !user.emailVerificationExpiresAt ||
+      user.emailVerificationExpiresAt <= new Date()
+    ) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+
+    const tokens = await this.tokenService.createTokens(user.id, user.email);
+
+    return { tokens };
+  }
+
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
-
-    // Find user by email
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
 
-    if (!user) {
+    if (!user || !(await argon2.verify(user.passwordHash, password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
-    // Verify password
-    const isValidPassword = await argon2.verify(user.passwordHash, password);
-
-    if (!isValidPassword) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    // Get user's organization memberships
-    const memberships = await this.prisma.membership.findMany({
-      where: { userId: user.id },
-      include: {
-        organization: true,
-      },
-    });
 
     this.logger.log(`User logged in successfully: ${user.email}`);
+    const tokens = await this.tokenService.createTokens(user.id, user.email);
+    const memberships = await this.prisma.membership.findMany({
+      where: { userId: user.id },
+      include: { organization: true },
+    });
 
     return {
       user: {
@@ -145,27 +148,28 @@ export class AuthService {
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,
       },
-      memberships: memberships.map((m) => ({
-        id: m.id,
-        role: m.role,
+      memberships: memberships.map((membership) => ({
+        id: membership.id,
+        role: membership.role,
         organization: {
-          id: m.organization.id,
-          name: m.organization.name,
-          slug: m.organization.slug,
+          id: membership.organization.id,
+          name: membership.organization.name,
+          slug: membership.organization.slug,
         },
       })),
+      tokens,
     };
   }
 
+  refreshTokens(refreshToken: string): Promise<TokenPair> {
+    return this.tokenService.rotateRefreshToken(refreshToken);
+  }
+
   private generateSlug(name: string): string {
-    return (
-      name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '') +
-      '-' +
-      Date.now().toString(36)
-    );
+    return `${name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')}-${Date.now().toString(36)}`;
   }
 }
