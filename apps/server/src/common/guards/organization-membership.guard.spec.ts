@@ -4,19 +4,25 @@ import { OrganizationMembershipGuard } from './organization-membership.guard';
 describe('OrganizationMembershipGuard', () => {
   const prisma = { membership: { findUnique: jest.fn() } };
   const guard = new OrganizationMembershipGuard(prisma as never);
-  const context = (userId = 'user-id', organizationId = 'organization-id') =>
+  const request = (params: { id?: string; organizationId?: string }) => ({
+    user: { id: 'user-id' },
+    params,
+  });
+  const context = (currentRequest: ReturnType<typeof request>) =>
     ({
       switchToHttp: () => ({
-        getRequest: () => ({ user: { id: userId }, params: { id: organizationId } }),
+        getRequest: () => currentRequest,
       }),
     }) as never;
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('allows a user with an organization membership', async () => {
+  it('authorizes membership and attaches the organization context', async () => {
+    const currentRequest = request({ id: 'organization-id' });
     prisma.membership.findUnique.mockResolvedValue({ id: 'membership-id' });
 
-    await expect(guard.canActivate(context())).resolves.toBe(true);
+    await expect(guard.canActivate(context(currentRequest))).resolves.toBe(true);
+    expect(currentRequest).toMatchObject({ organizationId: 'organization-id' });
     expect(prisma.membership.findUnique).toHaveBeenCalledWith({
       where: {
         userId_organizationId: {
@@ -28,11 +34,19 @@ describe('OrganizationMembershipGuard', () => {
     });
   });
 
+  it('supports organizationId in nested organization routes', async () => {
+    const currentRequest = request({ organizationId: 'organization-id' });
+    prisma.membership.findUnique.mockResolvedValue({ id: 'membership-id' });
+
+    await expect(guard.canActivate(context(currentRequest))).resolves.toBe(true);
+    expect(currentRequest).toMatchObject({ organizationId: 'organization-id' });
+  });
+
   it('rejects a user without an organization membership', async () => {
     prisma.membership.findUnique.mockResolvedValue(null);
 
-    await expect(guard.canActivate(context())).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      guard.canActivate(context(request({ id: 'organization-id' }))),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

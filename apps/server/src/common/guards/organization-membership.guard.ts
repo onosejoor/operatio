@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../../auth/decorators/current-user.decorator';
+import type { OrganizationRequest } from '../../organizations/decorators/current-organization-id.decorator';
 import { PrismaService } from '../../database/database.service';
 
 @Injectable()
@@ -14,8 +14,8 @@ export class OrganizationMembershipGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<AuthenticatedRequest & { params: { id?: string } }>();
-    const organizationId = request.params.id;
+      .getRequest<OrganizationRequest & { params: { id?: string; organizationId?: string } }>();
+    const organizationId = request.params.organizationId ?? request.params.id;
 
     if (!organizationId || !request.user) {
       throw new ForbiddenException('Organization membership is required');
@@ -35,6 +35,7 @@ export class OrganizationMembershipGuard implements CanActivate {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
+    request.organizationId = organizationId;
     return true;
   }
 }

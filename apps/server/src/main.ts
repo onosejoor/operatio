@@ -8,6 +8,7 @@ import { CustomValidationPipe } from './common/pipes/validation.pipe';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { AppConfigService } from './config/service/app-config.service';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -18,6 +19,7 @@ async function bootstrap() {
   const appConfig = app.get(AppConfigService);
   const logger = new Logger('Bootstrap');
 
+  app.use(helmet);
   app.use(cookieParser());
 
   // Global API prefix

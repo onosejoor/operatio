@@ -7,22 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Phase 2: User, Organization, Membership models
+enum MonitorStatus {
+  PENDING
+  UP
+  DOWN
+}
 
-// User model
+enum MembershipRole {
+  OWNER
+  MEMBER
+}
+
 model User {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  email        String   @unique
-  name         String
-  passwordHash String
-  emailVerified Boolean @default(false)
-  emailVerificationToken String?
+  id                         String    @id @default(auto()) @map("_id") @db.ObjectId
+  email                      String    @unique
+  name                       String
+  passwordHash               String
+  emailVerified              Boolean   @default(false)
+  emailVerificationToken     String?
   emailVerificationExpiresAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
-  memberships  Membership[]
-  tokens       Token[]
+  memberships Membership[]
+  tokens      Token[]
 
   @@map("users")
 }
@@ -36,19 +44,18 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
-  // monitors will be added in Phase 3
+  monitors    Monitor[]
 
   @@map("organizations")
 }
 
-// Membership model
 model Membership {
-  id             String        @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String        @db.ObjectId
-  organizationId String        @db.ObjectId
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String         @db.ObjectId
+  organizationId String         @db.ObjectId
   role           MembershipRole
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -57,20 +64,32 @@ model Membership {
   @@map("memberships")
 }
 
-enum MembershipRole {
-  OWNER
-  MEMBER
+model Monitor {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String        @db.ObjectId
+  name           String
+  url            String
+  interval       Int           @default(60)
+  timeout        Int           @default(10000)
+  status         MonitorStatus @default(PENDING)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("monitors")
 }
 
-// Refresh-token model
 model Token {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
   tokenHash String
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

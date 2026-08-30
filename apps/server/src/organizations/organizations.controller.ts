@@ -7,6 +7,7 @@ import {
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { OrganizationMembershipGuard } from '../common/guards/organization-membership.guard';
 import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
+import { CurrentOrganizationId } from './decorators/current-organization-id.decorator';
 import { OrganizationsService } from './organizations.service';
 
 @ApiTags('organizations')
@@ -30,7 +31,9 @@ export class OrganizationsController {
   @ApiResponse({ status: 200, type: ApiResponseDto })
   @ApiResponse({ status: 403, type: ApiResponseDto })
   @ApiResponse({ status: 404, type: ApiResponseDto })
-  async findOne(@Param('id') id: string) {
-    return ApiResponseDto.success(await this.organizationsService.findOne(id));
+  async findOne(@CurrentOrganizationId() organizationId: string) {
+    return ApiResponseDto.success(
+      await this.organizationsService.findOne(organizationId),
+    );
   }
 }
