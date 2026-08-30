@@ -6,7 +6,7 @@ export const envConfig = {
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   },
   database: {
-    url: process.env.DATABASE_URL || 'mongodb://localhost:27017/upwatch',
+    url: process.env.DATABASE_URL || 'mongodb://localhost:27017/operatio',
   },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',

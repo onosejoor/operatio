@@ -28,14 +28,14 @@ export const EMAIL_TEMPLATES: {
 <body>
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
     <h1>Verify Your Email</h1>
-    <p>Thank you for signing up for Upwatch! Please verify your email address by clicking the button below:</p>
+    <p>Thank you for signing up for operatio! Please verify your email address by clicking the button below:</p>
     <p>
       <a href="${context.verificationUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Verify Email</a>
     </p>
     <p>Or copy and paste this link into your browser:</p>
     <p>${context.verificationUrl}</p>
     <p>This link will expire in 24 hours.</p>
-    <p>If you didn't create an account with Upwatch, you can safely ignore this email.</p>
+    <p>If you didn't create an account with operatio, you can safely ignore this email.</p>
   </div>
 </body>
 </html>`,

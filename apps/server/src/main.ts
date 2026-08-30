@@ -43,7 +43,7 @@ async function bootstrap() {
 
   // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('Upwatch API')
+    .setTitle('operatio API')
     .setDescription(
       'Developer-focused uptime monitoring and incident management platform',
     )

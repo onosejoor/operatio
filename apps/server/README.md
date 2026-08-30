@@ -1,8 +1,8 @@
-# Upwatch API
+# operatio API
 
 ## Overview
 
-Upwatch API provides backend services for developer-focused uptime monitoring and incident management. It handles secure user authentication, multi-tenant organization management, and background job processing to ensure reliable monitoring workflows. The platform gives engineering teams the foundational tools they need to track system health and manage incident responses efficiently.
+operatio API provides backend services for developer-focused uptime monitoring and incident management. It handles secure user authentication, multi-tenant organization management, and background job processing to ensure reliable monitoring workflows. The platform gives engineering teams the foundational tools they need to track system health and manage incident responses efficiently.
 
 ## System Architecture
 
@@ -32,27 +32,32 @@ flowchart LR
 Follow these instructions to set up the project locally.
 
 1. Clone the Repository:
+
 ```bash
 git clone https://github.com/onosejoor/operatio.git
 cd operatio
 ```
 
 2. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 3. Configure your environment variables:
+
 ```bash
 cp .env.example .env
 ```
 
 4. Generate the Prisma client:
+
 ```bash
 pnpm exec prisma generate
 ```
 
 5. Start the development server:
+
 ```bash
 pnpm run start:dev
 ```
@@ -69,10 +74,10 @@ http://localhost:3000/api/docs
 
 ## Features
 
-* **Secure Authentication**: Implements JWT-based access and refresh token rotation with Argon2 password hashing. Secure HttpOnly cookies manage session state on the client side.
-* **Organization Memberships**: Multi-tenant architecture allowing users to own or participate in multiple organizations with specific roles.
-* **Background Processing**: Queues heavy tasks, such as email notifications, using BullMQ and Redis to keep API response times low.
-* **Health Monitoring**: Built-in diagnostics endpoints to track the connectivity status of the primary database, Redis cache, and background queues.
+- **Secure Authentication**: Implements JWT-based access and refresh token rotation with Argon2 password hashing. Secure HttpOnly cookies manage session state on the client side.
+- **Organization Memberships**: Multi-tenant architecture allowing users to own or participate in multiple organizations with specific roles.
+- **Background Processing**: Queues heavy tasks, such as email notifications, using BullMQ and Redis to keep API response times low.
+- **Health Monitoring**: Built-in diagnostics endpoints to track the connectivity status of the primary database, Redis cache, and background queues.
 
 ### Registration and Verification Flow
 
@@ -116,7 +121,7 @@ You need to define the following environment variables in your `.env` file for t
 ```text
 NODE_ENV=development
 PORT=3000
-DATABASE_URL=mongodb://localhost:27017/upwatch
+DATABASE_URL=mongodb://localhost:27017/operatio
 REDIS_URL=redis://localhost:6379
 REDIS_HOST=localhost
 REDIS_PORT=6379
@@ -131,16 +136,18 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password
-EMAIL_FROM=noreply@upwatch.dev
+EMAIL_FROM=noreply@operatio.dev
 ```
 
 ### [GET] /api/v1/health
+
 **Description**: Runs diagnostics on connected services and reports the overall system health.
 
 **Request**:
 No body required.
 
 **Response**:
+
 ```json
 {
   "status": "healthy",
@@ -160,9 +167,11 @@ No body required.
 ```
 
 ### [POST] /api/v1/auth/register
+
 **Description**: Registers a new user account, creates a personal organization, and sends an email verification link.
 
 **Request**:
+
 ```json
 {
   "name": "Jane Doe",
@@ -172,6 +181,7 @@ No body required.
 ```
 
 **Response**:
+
 ```json
 {
   "status": "success",
@@ -183,13 +193,16 @@ No body required.
 ```
 
 **Errors**:
-* 400: Validation error (e.g., weak password)
-* 409: User with this email already exists
+
+- 400: Validation error (e.g., weak password)
+- 409: User with this email already exists
 
 ### [POST] /api/v1/auth/login
+
 **Description**: Authenticates a user and sets HttpOnly cookies containing the access and refresh tokens.
 
 **Request**:
+
 ```json
 {
   "email": "jane@example.com",
@@ -198,6 +211,7 @@ No body required.
 ```
 
 **Response**:
+
 ```json
 {
   "status": "success",
@@ -226,13 +240,16 @@ No body required.
 ```
 
 **Errors**:
-* 400: Validation error
-* 401: Invalid credentials
+
+- 400: Validation error
+- 401: Invalid credentials
 
 ### [POST] /api/v1/auth/verify-email
+
 **Description**: Verifies a user account using the token sent to their email.
 
 **Request**:
+
 ```json
 {
   "token": "verification-token-string"
@@ -240,6 +257,7 @@ No body required.
 ```
 
 **Response**:
+
 ```json
 {
   "status": "success",
@@ -248,15 +266,18 @@ No body required.
 ```
 
 **Errors**:
-* 400: Invalid or expired verification token
+
+- 400: Invalid or expired verification token
 
 ### [POST] /api/v1/auth/refresh
+
 **Description**: Rotates access and refresh tokens using the existing refresh token stored in the `operatio_refresh_token` cookie.
 
 **Request**:
 No body required. Requires valid `operatio_refresh_token` cookie.
 
 **Response**:
+
 ```json
 {
   "status": "success",
@@ -265,20 +286,21 @@ No body required. Requires valid `operatio_refresh_token` cookie.
 ```
 
 **Errors**:
-* 401: Missing, invalid, or expired refresh token
+
+- 401: Missing, invalid, or expired refresh token
 
 ## Technologies Used
 
-| Technology | Purpose |
-| ---------- | ------- |
-| TypeScript | Language |
-| Node.js | Runtime |
-| NestJS | Application Framework |
-| Prisma | ORM |
-| MongoDB | Primary Database |
-| Redis | Caching and Queue Store |
-| BullMQ | Background Jobs |
-| Argon2 | Password Hashing |
+| Technology | Purpose                 |
+| ---------- | ----------------------- |
+| TypeScript | Language                |
+| Node.js    | Runtime                 |
+| NestJS     | Application Framework   |
+| Prisma     | ORM                     |
+| MongoDB    | Primary Database        |
+| Redis      | Caching and Queue Store |
+| BullMQ     | Background Jobs         |
+| Argon2     | Password Hashing        |
 
 ## Contributing
 
@@ -286,8 +308,8 @@ We welcome contributions. To get started, fork the repository, make your changes
 
 ## Author
 
-* LinkedIn: [https://linkedin.com/in/devtext16](https://linkedin.com/in/devtext16)
-* X (Twitter): [https://x.com/DevText16](https://x.com/DevText16)
+- LinkedIn: [https://linkedin.com/in/devtext16](https://linkedin.com/in/devtext16)
+- X (Twitter): [https://x.com/DevText16](https://x.com/DevText16)
 
 <br />
 
