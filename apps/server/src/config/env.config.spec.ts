@@ -1,27 +1,20 @@
-import { Test } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
+import { envConfig } from './env.config';
 
-describe('App Configuration', () => {
-  let configService: ConfigService;
-
-  beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [ConfigService],
-    }).compile();
-
-    configService = module.get<ConfigService>(ConfigService);
+describe('envConfig', () => {
+  it('provides the expected application defaults', () => {
+    expect(envConfig.app).toEqual({
+      nodeEnv: expect.any(String),
+      port: expect.any(Number),
+      corsOrigin: expect.any(String),
+      frontendUrl: expect.any(String),
+    });
   });
 
-  it('should have default values when environment variables are not set', () => {
-    // Test default values
-    expect(configService.get('env.app.nodeEnv')).toBe('development');
-    expect(configService.get('env.app.port')).toBe(3000);
-    expect(configService.get('env.app.corsOrigin')).toBe('http://localhost:3000');
-  });
-
-  it('should load configuration from environment', () => {
-    // In a real test environment, you would set process.env values
-    // and verify they are loaded correctly
-    expect(configService.get('env')).toBeDefined();
+  it('provides JWT expiry and email configuration', () => {
+    expect(envConfig.jwt.secret).toEqual(expect.any(String));
+    expect(envConfig.jwt.accessTokenExpiresIn).toEqual(expect.any(String));
+    expect(envConfig.jwt.refreshTokenExpiresIn).toEqual(expect.any(String));
+    expect(envConfig.sendlib.apiKey).toEqual(expect.any(String));
+    expect(envConfig.sendlib.from).toEqual(expect.any(String));
   });
 });

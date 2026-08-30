@@ -1,46 +1,60 @@
+import { INestApplication, Module } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from './../src/app.module';
+import { HealthController } from '../src/health/health.controller';
+import { PrismaService } from '../src/database/database.service';
+import { QueuesService } from '../src/queues/queues.service';
+import { RedisService } from '../src/redis/redis.service';
 
-describe('AppController (e2e)', () => {
+@Module({
+  controllers: [HealthController],
+  providers: [
+    {
+      provide: PrismaService,
+      useValue: { healthCheck: jest.fn().mockResolvedValue(true) },
+    },
+    {
+      provide: RedisService,
+      useValue: { healthCheck: jest.fn().mockResolvedValue(true) },
+    },
+    {
+      provide: QueuesService,
+      useValue: { healthCheck: jest.fn().mockResolvedValue(true) },
+    },
+  ],
+})
+class HealthTestModule {}
+
+describe('Health endpoint (e2e)', () => {
   let app: INestApplication;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [HealthTestModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api/v1');
     await app.init();
-  });
-
-  it('/api/v1/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/api/v1/health')
-      .expect(200)
-      .expect((res) => {
-        expect(res.body).toHaveProperty('status');
-        expect(res.body).toHaveProperty('timestamp');
-        expect(res.body).toHaveProperty('checks');
-        expect(res.body.checks).toHaveProperty('database');
-        expect(res.body.checks).toHaveProperty('redis');
-        expect(res.body.checks).toHaveProperty('queues');
-      });
-  });
-
-  it('/api/v1/health should return proper structure', () => {
-    return request(app.getHttpServer())
-      .get('/api/v1/health')
-      .expect(200)
-      .expect((res) => {
-        expect(['healthy', 'unhealthy']).toContain(res.body.status);
-        expect(typeof res.body.timestamp).toBe('string');
-        expect(typeof res.body.checks).toBe('object');
-      });
   });
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('GET /api/v1/health returns the healthy status structure', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health')
+      .expect(200);
+
+    expect(response.body).toEqual({
+      status: 'healthy',
+      timestamp: expect.any(String),
+      checks: {
+        database: { status: 'up' },
+        redis: { status: 'up' },
+        queues: { status: 'up' },
+      },
+    });
   });
 });

@@ -20,12 +20,9 @@ export const envConfig = {
     accessTokenExpiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '15m',
     refreshTokenExpiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '7d',
   },
-  email: {
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '', 10) || 587,
-    user: process.env.EMAIL_USER || '',
-    password: process.env.EMAIL_PASSWORD || '',
-    from: process.env.EMAIL_FROM || 'noreply@upwatch.dev',
+  sendlib: {
+    apiKey: process.env.SEND_LIB_API_KEY || '',
+    from: process.env.SEND_LIB_FROM || 'Operatio <noreply@operatio.dev>',
   },
 };
 

@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { AppConfigService } from 'src/config/service/app-config.service';
+import { AppConfigService } from '../config/service/app-config.service';
 
 @Injectable()
 export class PrismaService

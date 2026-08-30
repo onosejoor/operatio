@@ -1,98 +1,300 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Upwatch API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Upwatch API provides backend services for developer-focused uptime monitoring and incident management. It handles secure user authentication, multi-tenant organization management, and background job processing to ensure reliable monitoring workflows. The platform gives engineering teams the foundational tools they need to track system health and manage incident responses efficiently.
 
-## Description
+## System Architecture
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+```mermaid
+flowchart LR
+  Client["Web Client"]
+  Server["API Server"]
+  Database[("MongoDB")]
+  Cache["Redis Cache"]
+  Workers["BullMQ Workers"]
 
-## Project setup
+  Client --> Server
+  Server --> Database
+  Server --> Cache
+  Server --> Workers
+  Workers --> Cache
 
-```bash
-$ pnpm install
+  style Client fill:#1e1b4b,stroke:#6366f1,stroke-width:2px,color:#fff
+  style Server fill:#2e1065,stroke:#8b5cf6,stroke-width:2px,color:#fff
+  style Database fill:#022c22,stroke:#10b981,stroke-width:2px,color:#fff
+  style Cache fill:#4c0519,stroke:#ef4444,stroke-width:2px,color:#fff
+  style Workers fill:#2e1065,stroke:#8b5cf6,stroke-width:2px,color:#fff
 ```
 
-## Compile and run the project
+## Installation
 
+Follow these instructions to set up the project locally.
+
+1. Clone the Repository:
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+git clone https://github.com/onosejoor/operatio.git
+cd operatio
 ```
 
-## Run tests
-
+2. Install dependencies:
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+3. Configure your environment variables:
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+cp .env.example .env
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+4. Generate the Prisma client:
+```bash
+pnpm exec prisma generate
+```
 
-## Resources
+5. Start the development server:
+```bash
+pnpm run start:dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Usage
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Once the server is running, the API will be available at `http://localhost:3000/api/v1`. The project includes an automatic Swagger documentation page where you can interact with the endpoints.
 
-## Support
+To view the Swagger UI, navigate to the docs endpoint in your browser:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```text
+http://localhost:3000/api/docs
+```
 
-## Stay in touch
+## Features
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+* **Secure Authentication**: Implements JWT-based access and refresh token rotation with Argon2 password hashing. Secure HttpOnly cookies manage session state on the client side.
+* **Organization Memberships**: Multi-tenant architecture allowing users to own or participate in multiple organizations with specific roles.
+* **Background Processing**: Queues heavy tasks, such as email notifications, using BullMQ and Redis to keep API response times low.
+* **Health Monitoring**: Built-in diagnostics endpoints to track the connectivity status of the primary database, Redis cache, and background queues.
 
-## License
+### Registration and Verification Flow
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```mermaid
+sequenceDiagram
+  actor User
+  participant API as "API Server"
+  participant DB as "MongoDB"
+  participant Queue as "Notification Queue"
+
+  User->>API: POST /auth/register
+  API->>DB: Check existing email
+  API->>DB: Create user and organization
+  API->>Queue: Dispatch verification email
+  API->>User: Return success response
+```
+
+### Authentication and Session Flow
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant API as "API Server"
+  participant DB as "MongoDB"
+
+  User->>API: POST /auth/login
+  API->>DB: Query user by email
+  API->>API: Verify Argon2 password hash
+  API->>DB: Store secure refresh token
+  API->>User: Set HttpOnly cookies and return profile
+```
+
+## API Documentation
+
+The server exposes the following REST endpoints. All requests and responses use JSON formatting.
+
+### Environment Variables
+
+You need to define the following environment variables in your `.env` file for the application to function correctly.
+
+```text
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=mongodb://localhost:27017/upwatch
+REDIS_URL=redis://localhost:6379
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_USERNAME=
+REDIS_PASSWORD=
+JWT_SECRET=your-secret-key-change-in-production
+JWT_ACCESS_TOKEN_EXPIRES_IN=15m
+JWT_REFRESH_TOKEN_EXPIRES_IN=7d
+CORS_ORIGIN=http://localhost:3000
+FRONTEND_URL=http://localhost:3000
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+EMAIL_FROM=noreply@upwatch.dev
+```
+
+### [GET] /api/v1/health
+**Description**: Runs diagnostics on connected services and reports the overall system health.
+
+**Request**:
+No body required.
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2023-10-15T10:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "up"
+    },
+    "redis": {
+      "status": "up"
+    },
+    "queues": {
+      "status": "up"
+    }
+  }
+}
+```
+
+### [POST] /api/v1/auth/register
+**Description**: Registers a new user account, creates a personal organization, and sends an email verification link.
+
+**Request**:
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Registration successful. Please check your email to verify your account.",
+  "data": {
+    "message": "User created successfully"
+  }
+}
+```
+
+**Errors**:
+* 400: Validation error (e.g., weak password)
+* 409: User with this email already exists
+
+### [POST] /api/v1/auth/login
+**Description**: Authenticates a user and sets HttpOnly cookies containing the access and refresh tokens.
+
+**Request**:
+```json
+{
+  "email": "jane@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "60d5ecb8b392d7001f3e3923",
+      "email": "jane@example.com",
+      "name": "Jane Doe",
+      "emailVerified": true,
+      "createdAt": "2023-10-15T10:00:00.000Z"
+    },
+    "memberships": [
+      {
+        "id": "60d5ecb8b392d7001f3e3924",
+        "role": "OWNER",
+        "organization": {
+          "id": "60d5ecb8b392d7001f3e3925",
+          "name": "Jane Doe",
+          "slug": "jane-doe-123"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Errors**:
+* 400: Validation error
+* 401: Invalid credentials
+
+### [POST] /api/v1/auth/verify-email
+**Description**: Verifies a user account using the token sent to their email.
+
+**Request**:
+```json
+{
+  "token": "verification-token-string"
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Email verified successfully"
+}
+```
+
+**Errors**:
+* 400: Invalid or expired verification token
+
+### [POST] /api/v1/auth/refresh
+**Description**: Rotates access and refresh tokens using the existing refresh token stored in the `operatio_refresh_token` cookie.
+
+**Request**:
+No body required. Requires valid `operatio_refresh_token` cookie.
+
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Tokens refreshed successfully"
+}
+```
+
+**Errors**:
+* 401: Missing, invalid, or expired refresh token
+
+## Technologies Used
+
+| Technology | Purpose |
+| ---------- | ------- |
+| TypeScript | Language |
+| Node.js | Runtime |
+| NestJS | Application Framework |
+| Prisma | ORM |
+| MongoDB | Primary Database |
+| Redis | Caching and Queue Store |
+| BullMQ | Background Jobs |
+| Argon2 | Password Hashing |
+
+## Contributing
+
+We welcome contributions. To get started, fork the repository, make your changes on a feature branch, and submit a pull request. Make sure to run the testing and linting scripts locally before pushing your code.
+
+## Author
+
+* LinkedIn: [https://linkedin.com/in/devtext16](https://linkedin.com/in/devtext16)
+* X (Twitter): [https://x.com/DevText16](https://x.com/DevText16)
+
+<br />
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+
+[![Readme was generated by Dokugen](https://img.shields.io/badge/Readme%20was%20generated%20by-Dokugen-brightgreen)](https://dokugen.samueltuoyo.com)

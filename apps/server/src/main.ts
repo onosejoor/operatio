@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -18,6 +19,7 @@ async function bootstrap() {
   const logger = app.get(Logger);
 
   app.useLogger(logger);
+  app.use(cookieParser());
 
   // Global API prefix
   app.setGlobalPrefix('api/v1');

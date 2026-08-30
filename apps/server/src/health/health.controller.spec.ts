@@ -6,7 +6,7 @@ import { QueuesService } from '../queues/queues.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
-  let PrismaService: PrismaService;
+  let prismaService: PrismaService;
   let redisService: RedisService;
   let queuesService: QueuesService;
 
@@ -36,7 +36,7 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    PrismaService = module.get<PrismaService>(PrismaService);
+    prismaService = module.get<PrismaService>(PrismaService);
     redisService = module.get<RedisService>(RedisService);
     queuesService = module.get<QueuesService>(QueuesService);
   });
@@ -46,7 +46,7 @@ describe('HealthController', () => {
   });
 
   it('should return healthy status when all services are up', async () => {
-    jest.spyOn(PrismaService, 'healthCheck').mockResolvedValue(true);
+    jest.spyOn(prismaService, 'healthCheck').mockResolvedValue(true);
     jest.spyOn(redisService, 'healthCheck').mockResolvedValue(true);
     jest.spyOn(queuesService, 'healthCheck').mockResolvedValue(true);
 
@@ -60,7 +60,7 @@ describe('HealthController', () => {
   });
 
   it('should return unhealthy status when database is down', async () => {
-    jest.spyOn(PrismaService, 'healthCheck').mockResolvedValue(false);
+    jest.spyOn(prismaService, 'healthCheck').mockResolvedValue(false);
     jest.spyOn(redisService, 'healthCheck').mockResolvedValue(true);
     jest.spyOn(queuesService, 'healthCheck').mockResolvedValue(true);
 
@@ -71,7 +71,7 @@ describe('HealthController', () => {
   });
 
   it('should return unhealthy status when redis is down', async () => {
-    jest.spyOn(PrismaService, 'healthCheck').mockResolvedValue(true);
+    jest.spyOn(prismaService, 'healthCheck').mockResolvedValue(true);
     jest.spyOn(redisService, 'healthCheck').mockResolvedValue(false);
     jest.spyOn(queuesService, 'healthCheck').mockResolvedValue(true);
 
@@ -82,7 +82,7 @@ describe('HealthController', () => {
   });
 
   it('should return unhealthy status when queues are down', async () => {
-    jest.spyOn(PrismaService, 'healthCheck').mockResolvedValue(true);
+    jest.spyOn(prismaService, 'healthCheck').mockResolvedValue(true);
     jest.spyOn(redisService, 'healthCheck').mockResolvedValue(true);
     jest.spyOn(queuesService, 'healthCheck').mockResolvedValue(false);
 
@@ -95,7 +95,7 @@ describe('HealthController', () => {
   it('should call all health check services', async () => {
     await controller.check();
 
-    expect(PrismaService.healthCheck).toHaveBeenCalled();
+    expect(prismaService.healthCheck).toHaveBeenCalled();
     expect(redisService.healthCheck).toHaveBeenCalled();
     expect(queuesService.healthCheck).toHaveBeenCalled();
   });

@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { TokenService } from './token.service';
+import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
 import { NotificationModule } from '../notification/notification.module';
 import { ConfigModule } from '../config/config.module';
 import { AppConfigService } from '../config/service/app-config.service';
@@ -20,7 +21,7 @@ import { AppConfigService } from '../config/service/app-config.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService],
+  providers: [AuthService, TokenService, JwtCookieAuthGuard],
   exports: [AuthService, TokenService],
 })
 export class AuthModule {}

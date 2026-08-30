@@ -1,22 +1,28 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { TokenPair, TokenService } from './token.service';
 import { AppConfigService } from '../config/service/app-config.service';
+import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { AuthenticatedUser } from './decorators/current-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -56,15 +62,10 @@ export class AuthController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify an email address' })
+  @ApiOperation({ summary: 'Verify an email address and start a session' })
   @ApiResponse({
     status: 200,
     description: 'Email verified successfully',
-    type: ApiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid or expired verification token',
     type: ApiResponseDto,
   })
   @ApiBody({ type: VerifyEmailDto })
@@ -78,6 +79,24 @@ export class AuthController {
     return ApiResponseDto.success(undefined, 'Email verified successfully');
   }
 
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend an email verification link' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email processing completed',
+    type: ApiResponseDto,
+  })
+  @ApiBody({ type: ResendVerificationDto })
+  async resendVerification(
+    @Body() resendVerificationDto: ResendVerificationDto,
+  ) {
+    const result = await this.authService.resendVerification(
+      resendVerificationDto.email,
+    );
+    return ApiResponseDto.success(result, result.message);
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
@@ -89,11 +108,6 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Invalid credentials',
-    type: ApiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Validation error',
     type: ApiResponseDto,
   })
   @ApiBody({ type: LoginDto })
@@ -124,10 +138,8 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const refreshToken = this.getCookie(
-      request.headers.cookie,
-      'operatio_refresh_token',
-    );
+    const refreshToken = request.cookies.operatio_refresh_token as
+      string | undefined;
 
     if (!refreshToken) {
       throw new UnauthorizedException('Missing refresh token');
@@ -137,6 +149,44 @@ export class AuthController {
     this.setAuthCookies(response, tokens);
 
     return ApiResponseDto.success(undefined, 'Tokens refreshed successfully');
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'End the current session' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logout successful',
+    type: ApiResponseDto,
+  })
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.authService.logout(
+      request.cookies.operatio_refresh_token as string | undefined,
+    );
+    this.clearAuthCookies(response);
+
+    return ApiResponseDto.success(undefined, 'Logout successful');
+  }
+
+  @Get('me')
+  @UseGuards(JwtCookieAuthGuard)
+  @ApiOperation({ summary: 'Get the authenticated user identity' })
+  @ApiResponse({
+    status: 200,
+    description: 'Authenticated user',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid access token',
+    type: ApiResponseDto,
+  })
+  async me(@CurrentUser() user: AuthenticatedUser) {
+    const userData = await this.authService.getUser(user.id);
+    return ApiResponseDto.success(userData);
   }
 
   private setAuthCookies(response: Response, tokens: TokenPair): void {
@@ -154,19 +204,24 @@ export class AuthController {
       secure,
       sameSite: 'lax',
       maxAge: this.tokenService.getRefreshTokenMaxAge(),
-      path: '/api/v1/auth/refresh',
+      path: '/api/v1/auth',
     });
   }
 
-  private getCookie(
-    cookieHeader: string | undefined,
-    name: string,
-  ): string | undefined {
-    return cookieHeader
-      ?.split(';')
-      .map((cookie) => cookie.trim().split('='))
-      .find(([key]) => key === name)
-      ?.slice(1)
-      .join('=');
+  private clearAuthCookies(response: Response): void {
+    const secure = this.appConfig.get('app.nodeEnv') === 'production';
+
+    response.clearCookie('operatio_access_token', {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      path: '/',
+    });
+    response.clearCookie('operatio_refresh_token', {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      path: '/api/v1/auth',
+    });
   }
 }

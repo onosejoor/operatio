@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
@@ -75,15 +76,11 @@ export class AuthService {
       });
 
       this.logger.log(`User registered successfully: ${normalizedEmail}`);
-      await this.notificationService.sendEmail({
-        to: normalizedEmail,
-        subject: 'Verify your email',
-        template: 'email-verification',
-        context: {
-          name: result.user.name,
-          verificationUrl: `${this.appConfig.get('app.frontendUrl')}/verify-email?token=${verificationToken}`,
-        },
-      });
+      await this.sendVerificationEmail(
+        normalizedEmail,
+        result.user.name,
+        verificationToken,
+      );
 
       return { message: 'User created successfully' };
     } catch (error: unknown) {
@@ -95,6 +92,58 @@ export class AuthService {
     }
   }
 
+  async getUser(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        name: true,
+        email: true,
+        emailVerified: true,
+        memberships: {
+          select: {
+            id: true,
+            role: true,
+            createdAt: true,
+            organization: { select: { name: true, id: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User Not Found');
+    }
+
+    return user;
+  }
+
+  async resendVerification(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true, name: true, email: true, emailVerified: true },
+    });
+
+    if (!user || user.emailVerified) {
+      return {
+        message: 'If the account exists, a verification email has been sent',
+      };
+    }
+
+    const verificationToken = randomBytes(32).toString('hex');
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken: verificationToken,
+        emailVerificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+    await this.sendVerificationEmail(user.email, user.name, verificationToken);
+
+    return {
+      message: 'If the account exists, a verification email has been sent',
+    };
+  }
   async verifyEmail(token: string) {
     const user = await this.prisma.user.findFirst({
       where: { emailVerificationToken: token },
@@ -141,30 +190,34 @@ export class AuthService {
     });
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        emailVerified: user.emailVerified,
-        createdAt: user.createdAt,
-      },
-      memberships: memberships.map((membership) => ({
-        id: membership.id,
-        role: membership.role,
-        organization: {
-          id: membership.organization.id,
-          name: membership.organization.name,
-          slug: membership.organization.slug,
-        },
-      })),
       tokens,
     };
   }
 
+  async logout(refreshToken: string | undefined): Promise<void> {
+    if (refreshToken) {
+      await this.tokenService.revokeRefreshToken(refreshToken);
+    }
+  }
   refreshTokens(refreshToken: string): Promise<TokenPair> {
     return this.tokenService.rotateRefreshToken(refreshToken);
   }
 
+  private async sendVerificationEmail(
+    email: string,
+    name: string,
+    verificationToken: string,
+  ): Promise<void> {
+    await this.notificationService.sendEmail({
+      to: email,
+      subject: 'Verify your email',
+      template: 'email-verification',
+      context: {
+        name,
+        verificationUrl: `${this.appConfig.get('app.frontendUrl')}/verify-email?token=${verificationToken}`,
+      },
+    });
+  }
   private generateSlug(name: string): string {
     return `${name
       .toLowerCase()

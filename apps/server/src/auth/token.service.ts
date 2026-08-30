@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../database/database.service';
 import { AppConfigService } from '../config/service/app-config.service';
+import type { AuthenticatedUser } from './decorators/current-user.decorator';
 
 interface TokenPayload {
   sub: string;
@@ -39,11 +40,11 @@ export class TokenService {
       },
     });
     const accessToken = await this.jwtService.signAsync(
-      { sub: userId, email, type: 'access' },
+      { sub: userId, type: 'access' },
       { expiresIn: accessExpiresIn },
     );
     const refreshToken = await this.jwtService.signAsync(
-      { sub: userId, email, type: 'refresh', tokenId: token.id },
+      { sub: userId, type: 'refresh', tokenId: token.id },
       { expiresIn: refreshExpiresIn },
     );
 
@@ -55,19 +56,24 @@ export class TokenService {
     return { accessToken, refreshToken };
   }
 
-  async rotateRefreshToken(refreshToken: string): Promise<TokenPair> {
+  async verifyAccessToken(accessToken: string): Promise<AuthenticatedUser> {
     let payload: TokenPayload;
 
     try {
-      payload = await this.jwtService.verifyAsync<TokenPayload>(refreshToken);
+      payload = await this.jwtService.verifyAsync<TokenPayload>(accessToken);
     } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException('Invalid or expired access token');
     }
 
-    if (payload.type !== 'refresh' || !payload.tokenId) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+    if (payload.type !== 'access') {
+      throw new UnauthorizedException('Invalid or expired access token');
     }
 
+    return { id: payload.sub };
+  }
+
+  async rotateRefreshToken(refreshToken: string): Promise<TokenPair> {
+    const payload = await this.verifyRefreshToken(refreshToken);
     const token = await this.prisma.token.findUnique({
       where: { id: payload.tokenId },
       include: { user: true },
@@ -90,6 +96,23 @@ export class TokenService {
     return this.createTokens(token.user.id, token.user.email);
   }
 
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    try {
+      const payload = await this.verifyRefreshToken(refreshToken);
+
+      await this.prisma.token.updateMany({
+        where: {
+          id: payload.tokenId,
+          tokenHash: this.hashToken(refreshToken),
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
+    } catch {
+      return;
+    }
+  }
+
   getAccessTokenMaxAge(): number {
     return (
       this.parseTokenLifetime(this.appConfig.get('jwt.accessTokenExpiresIn')) *
@@ -102,6 +125,24 @@ export class TokenService {
       this.parseTokenLifetime(this.appConfig.get('jwt.refreshTokenExpiresIn')) *
       1000
     );
+  }
+
+  private async verifyRefreshToken(
+    refreshToken: string,
+  ): Promise<TokenPayload & { tokenId: string }> {
+    let payload: TokenPayload;
+
+    try {
+      payload = await this.jwtService.verifyAsync<TokenPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (payload.type !== 'refresh' || !payload.tokenId) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    return { ...payload, tokenId: payload.tokenId };
   }
 
   private hashToken(token: string): string {
