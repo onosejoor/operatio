@@ -1,4 +1,5 @@
 import { InternalServerErrorException } from '@nestjs/common';
+import { HttpClientService } from '../../../common/http/http-client.service';
 import { AppConfigService } from '../../../config/service/app-config.service';
 import { SendlibEmailProvider } from './sendlib-email.provider';
 
@@ -10,21 +11,18 @@ describe('SendlibEmailProvider', () => {
       return undefined;
     }),
   } as unknown as AppConfigService;
+  const httpClient = {
+    post: jest.fn(),
+  } as unknown as HttpClientService;
   let provider: SendlibEmailProvider;
-  let fetchSpy: jest.SpiedFunction<typeof fetch>;
 
   beforeEach(() => {
-    provider = new SendlibEmailProvider(config);
-    fetchSpy = jest.spyOn(globalThis, 'fetch');
-  });
-
-  afterEach(() => {
-    fetchSpy.mockRestore();
+    provider = new SendlibEmailProvider(config, httpClient);
     jest.clearAllMocks();
   });
 
   it('sends rendered email content through Sendlib', async () => {
-    fetchSpy.mockResolvedValue({ ok: true, status: 202 } as Response);
+    jest.spyOn(httpClient, 'post').mockResolvedValue(undefined);
 
     await expect(
       provider.send({
@@ -34,33 +32,30 @@ describe('SendlibEmailProvider', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(fetchSpy).toHaveBeenCalledWith(
+    expect(httpClient.post).toHaveBeenCalledWith(
       'https://sendlib.samueltuoyo.com/api/send',
-      expect.objectContaining({
-        method: 'POST',
+      {
+        from: 'Operatio <sender@example.com>',
+        to: 'recipient@example.com',
+        subject: 'Verify your email',
+        html: '<p>Verify</p>',
+      },
+      {
         headers: {
           Authorization: 'Bearer sendlib-api-key',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: 'Operatio <sender@example.com>',
-          to: 'recipient@example.com',
-          subject: 'Verify your email',
-          html: '<p>Verify</p>',
-        }),
-      }),
+      },
     );
   });
 
-  it('rejects failed Sendlib responses', async () => {
-    fetchSpy.mockResolvedValue({ ok: false, status: 500 } as Response);
+  it('rejects sending when no Sendlib API key is configured', async () => {
+    jest.spyOn(config, 'get').mockReturnValueOnce('');
 
     await expect(
       provider.send({ to: 'recipient@example.com', subject: 'Test', html: '' }),
     ).rejects.toThrow(
-      new InternalServerErrorException(
-        'Sendlib email delivery failed with status 500',
-      ),
+      new InternalServerErrorException('SEND_LIB_API_KEY is not configured'),
     );
   });
 });

@@ -1,62 +1,63 @@
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import { ApiResponseDto } from '../dto/api-response.dto';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const context = host.switchToHttp();
+    const response = context.getResponse<Response>();
+    const request = context.getRequest<Request>();
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const message = this.getMessage(exception);
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Internal server error';
-    let error = 'Internal server error';
-    let details: any = undefined;
-
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
-      
-      if (typeof exceptionResponse === 'string') {
-        message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object') {
-        const responseObj = exceptionResponse as any;
-        message = responseObj.message || message;
-        error = responseObj.error || error;
-        details = responseObj.details;
-      }
-    } else if (exception instanceof Error) {
-      message = exception.message;
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(
+        `${request.method} ${request.url} ${status} - ${message}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    } else {
+      this.logger.warn(
+        `${request.method} ${request.url} ${status} - ${message}`,
+      );
     }
 
-    // Log error with context
-    this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${message}`,
-      exception instanceof Error ? exception.stack : '',
-    );
+    response.status(status).json(ApiResponseDto.error(message));
+  }
 
-    // Sanitize error response
-    const sanitizedResponse: any = {
-      statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      error,
-      message,
-    };
-
-    if (details && process.env.NODE_ENV !== 'production') {
-      sanitizedResponse.details = details;
+  private getMessage(exception: unknown): string {
+    if (!(exception instanceof HttpException)) {
+      return 'Internal server error';
     }
 
-    response.status(status).json(sanitizedResponse);
+    const exceptionResponse = exception.getResponse();
+
+    if (typeof exceptionResponse === 'string') {
+      return exceptionResponse;
+    }
+
+    if (!('message' in exceptionResponse)) {
+      return 'Request failed';
+    }
+
+    const message = (exceptionResponse as { message?: unknown }).message;
+
+    if (Array.isArray(message)) {
+      return message.join(', ');
+    }
+
+    return typeof message === 'string' ? message : 'Request failed';
   }
 }

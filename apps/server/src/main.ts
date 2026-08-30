@@ -1,13 +1,13 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { CustomValidationPipe } from './common/pipes/validation.pipe';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AppConfigService } from './config/service/app-config.service';
+import { apiReference } from '@scalar/nestjs-api-reference';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -16,9 +16,8 @@ async function bootstrap() {
   });
 
   const appConfig = app.get(AppConfigService);
-  const logger = app.get(Logger);
+  const logger = new Logger('Bootstrap');
 
-  app.useLogger(logger);
   app.use(cookieParser());
 
   // Global API prefix
@@ -32,7 +31,6 @@ async function bootstrap() {
 
   // Global interceptors
   app.useGlobalInterceptors(new RequestIdInterceptor());
-  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // CORS configuration
   const corsOrigin = appConfig.get('app.corsOrigin');
@@ -58,7 +56,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  app.use('/api/docs', apiReference({ content: document }));
 
   // Graceful shutdown
   app.enableShutdownHooks();

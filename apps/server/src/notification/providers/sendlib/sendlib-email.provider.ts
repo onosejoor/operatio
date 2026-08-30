@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { AppConfigService } from 'src/config/service/app-config.service';
+import { HttpClientService } from '../../../common/http/http-client.service';
+import { AppConfigService } from '../../../config/service/app-config.service';
 
 export interface SendlibEmail {
   to: string;
@@ -9,7 +10,10 @@ export interface SendlibEmail {
 
 @Injectable()
 export class SendlibEmailProvider {
-  constructor(private readonly appConfig: AppConfigService) {}
+  constructor(
+    private readonly appConfig: AppConfigService,
+    private readonly httpClient: HttpClientService,
+  ) {}
 
   async send(email: SendlibEmail): Promise<void> {
     const apiKey = this.appConfig.get('sendlib.apiKey');
@@ -20,24 +24,20 @@ export class SendlibEmailProvider {
       );
     }
 
-    const response = await fetch('https://sendlib.samueltuoyo.com/api/send', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    await this.httpClient.post(
+      'https://sendlib.samueltuoyo.com/api/send',
+      {
         from: this.appConfig.get('sendlib.from'),
         to: email.to,
         subject: email.subject,
         html: email.html,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new InternalServerErrorException(
-        `Sendlib email delivery failed with status ${response.status}`,
-      );
-    }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 }
