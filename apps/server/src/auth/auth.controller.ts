@@ -11,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { RATE_LIMITS } from '../constants';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -34,6 +36,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: RATE_LIMITS.auth.register })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
@@ -61,6 +64,7 @@ export class AuthController {
   }
 
   @Post('verify-email')
+  @Throttle({ default: RATE_LIMITS.auth.verifyEmail })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify an email address and start a session' })
   @ApiResponse({
@@ -80,6 +84,7 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @Throttle({ default: RATE_LIMITS.auth.resendVerification })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend an email verification link' })
   @ApiResponse({
@@ -98,6 +103,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: RATE_LIMITS.auth.login })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({
@@ -122,6 +128,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: RATE_LIMITS.auth.refresh })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access and refresh tokens' })
   @ApiResponse({

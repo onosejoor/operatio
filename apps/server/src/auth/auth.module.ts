@@ -22,6 +22,6 @@ import { AppConfigService } from '../config/service/app-config.service';
   ],
   controllers: [AuthController],
   providers: [AuthService, TokenService, JwtCookieAuthGuard],
-  exports: [AuthService, TokenService],
+  exports: [AuthService, TokenService, JwtCookieAuthGuard],
 })
 export class AuthModule {}
