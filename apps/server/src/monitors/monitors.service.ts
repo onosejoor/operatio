@@ -3,7 +3,7 @@ import { MonitorStatus, AggregateType } from '@prisma/client';
 import { PrismaService } from '../database/database.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
-import { MonitorCheckQueue } from './monitor-check.queue';
+import { MonitorCheckQueue } from './checker/monitor-check.queue';
 import { OutboxWriter } from '../infrastructure/outbox/writers/outbox.writer';
 import { EventType } from '../shared/events/event-types';
 
@@ -26,7 +26,7 @@ export class MonitorsService {
     private readonly prisma: PrismaService,
     private readonly monitorCheckQueue: MonitorCheckQueue,
     private readonly outboxWriter: OutboxWriter,
-  ) {}
+  ) { }
 
   async create(organizationId: string, createMonitorDto: CreateMonitorDto): Promise<void> {
     const monitorId = await this.prisma.$transaction(async (tx) => {

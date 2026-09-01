@@ -6,9 +6,9 @@ import { OutboxModule } from '../infrastructure/outbox/outbox.module';
 import { EventDispatcher } from '../infrastructure/outbox/dispatchers/event-dispatcher';
 import { EventType } from '../shared/events/event-types';
 import { MonitorsController } from './monitors.controller';
-import { MonitorCheckQueue } from './monitor-check.queue';
-import { MonitorCheckService } from './monitor-check.service';
-import { MonitorCheckWorker } from './monitor-check.worker';
+import { MonitorCheckQueue } from './checker/monitor-check.queue';
+import { MonitorCheckService } from './checker/monitor-check.service';
+import { MonitorCheckWorker } from './checker/monitor-check.worker';
 import { MonitorsService } from './monitors.service';
 import { MonitorCreatedHandler } from './handlers/monitor-created.handler';
 
@@ -37,4 +37,4 @@ import { MonitorCreatedHandler } from './handlers/monitor-created.handler';
     },
   ],
 })
-export class MonitorsModule {}
+export class MonitorsModule { }

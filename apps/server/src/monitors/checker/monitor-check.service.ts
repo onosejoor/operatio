@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MonitorStatus } from '@prisma/client';
 import axios from 'axios';
-import { HttpClientService } from '../common/http/http-client.service';
-import { PrismaService } from '../database/database.service';
-import type { MonitorCheckResult } from './monitor-check.types';
+import { HttpClientService } from '../../common/http/http-client.service';
+import { PrismaService } from '../../database/database.service';
+import type { MonitorCheckResult } from '../types/monitor-check.types';
 
 @Injectable()
 export class MonitorCheckService {

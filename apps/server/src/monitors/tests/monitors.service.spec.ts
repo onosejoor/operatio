@@ -1,8 +1,11 @@
 import { NotFoundException } from '@nestjs/common';
 import { MonitorStatus } from '@prisma/client';
-import { MonitorsService } from './monitors.service';
+import { MonitorsService } from '../monitors.service';
 
 describe('MonitorsService', () => {
+  const transaction = {
+    monitor: { create: jest.fn() },
+  };
   const prisma = {
     monitor: {
       create: jest.fn(),
@@ -10,11 +13,19 @@ describe('MonitorsService', () => {
       findFirst: jest.fn(),
       updateMany: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
   const monitorCheckQueue = { enqueue: jest.fn() };
-  const service = new MonitorsService(prisma as never, monitorCheckQueue);
+  const outboxWriter = { writeTx: jest.fn() };
+  const service = new MonitorsService(prisma as never, monitorCheckQueue as never, outboxWriter as never);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.$transaction.mockImplementation(
+      (callback: (client: typeof transaction) => Promise<void>) =>
+        callback(transaction),
+    );
+  });
 
   it('creates a monitor and queues its initial check', async () => {
     const input = {

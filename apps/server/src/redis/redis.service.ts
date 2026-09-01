@@ -15,7 +15,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private appConfig: AppConfigService) {
     const redisUrl = this.appConfig.get('redis.url');
     const redisConfig: any = {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null,
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);
         return delay;

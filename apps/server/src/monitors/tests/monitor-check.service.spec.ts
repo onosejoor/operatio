@@ -1,6 +1,6 @@
 import { MonitorStatus } from '@prisma/client';
-import { MonitorCheckService } from './monitor-check.service';
-import { HttpClientService } from '../common/http/http-client.service';
+import { MonitorCheckService } from '../checker/monitor-check.service';
+import { HttpClientService } from '../../common/http/http-client.service';
 
 describe('MonitorCheckService', () => {
   const transaction = {
