@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { MonitorStatus } from '@prisma/client';
 import { MonitorsService } from './monitors.service';
 
 describe('MonitorsService', () => {
@@ -10,11 +11,12 @@ describe('MonitorsService', () => {
       updateMany: jest.fn(),
     },
   };
-  const service = new MonitorsService(prisma as never);
+  const monitorCheckQueue = { enqueue: jest.fn() };
+  const service = new MonitorsService(prisma as never, monitorCheckQueue);
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('creates a monitor within the organization without returning it', async () => {
+  it('creates a monitor and queues its initial check', async () => {
     const input = {
       name: 'API',
       url: 'https://api.example.com/health',
@@ -23,11 +25,14 @@ describe('MonitorsService', () => {
     };
     prisma.monitor.create.mockResolvedValue({ id: 'monitor-id' });
 
-    await expect(service.create('organization-id', input)).resolves.toBeUndefined();
+    await expect(
+      service.create('organization-id', input),
+    ).resolves.toBeUndefined();
     expect(prisma.monitor.create).toHaveBeenCalledWith({
       data: { organizationId: 'organization-id', ...input },
       select: { id: true },
     });
+    expect(monitorCheckQueue.enqueue).toHaveBeenCalledWith('monitor-id');
   });
 
   it('lists only monitors for the requested organization', async () => {
@@ -73,6 +78,23 @@ describe('MonitorsService', () => {
       where: { id: 'monitor-id', organizationId: 'organization-id' },
       data: input,
     });
+  });
+
+  it('queues a fresh check when a monitor URL changes', async () => {
+    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.update('organization-id', 'monitor-id', {
+      url: 'https://api.example.com/v2/health',
+    });
+
+    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+      where: { id: 'monitor-id', organizationId: 'organization-id' },
+      data: {
+        url: 'https://api.example.com/v2/health',
+        status: MonitorStatus.PENDING,
+      },
+    });
+    expect(monitorCheckQueue.enqueue).toHaveBeenCalledWith('monitor-id');
   });
 
   it('reports a missing monitor when no scoped update occurs', async () => {

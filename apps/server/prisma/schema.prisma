@@ -18,6 +18,20 @@ enum MembershipRole {
   MEMBER
 }
 
+enum AggregateType {
+  Monitor
+  Incident
+  User
+  Organization
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
 model User {
   id                         String    @id @default(auto()) @map("_id") @db.ObjectId
   email                      String    @unique
@@ -35,7 +49,6 @@ model User {
   @@map("users")
 }
 
-// Organization model
 model Organization {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
@@ -65,21 +78,40 @@ model Membership {
 }
 
 model Monitor {
-  id             String        @id @default(auto()) @map("_id") @db.ObjectId
-  organizationId String        @db.ObjectId
-  name           String
-  url            String
-  interval       Int           @default(60)
-  timeout        Int           @default(10000)
-  status         MonitorStatus @default(PENDING)
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId     String        @db.ObjectId
+  name               String
+  url                String
+  interval           Int           @default(60)
+  timeout            Int           @default(10000)
+  status             MonitorStatus @default(PENDING)
+  isActive           Boolean       @default(true)
+  lastCheckedAt      DateTime?
+  lastStatusCode     Int?
+  lastResponseTimeMs Int?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checks       MonitorCheck[]
 
   @@index([organizationId])
   @@map("monitors")
+}
+
+model MonitorCheck {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  monitorId      String        @db.ObjectId
+  status         MonitorStatus
+  statusCode     Int?
+  responseTimeMs Int
+  error          String?
+  checkedAt      DateTime      @default(now())
+
+  monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, checkedAt])
+  @@map("monitor_checks")
 }
 
 model Token {
@@ -94,4 +126,20 @@ model Token {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tokens")
+}
+
+model OutboxEvent {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  aggregateType AggregateType
+  aggregateId  String
+  eventType    String
+  payload      String
+  status       OutboxStatus @default(PENDING)
+  attempts     Int          @default(0)
+  availableAt  DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  processedAt  DateTime?
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
 }

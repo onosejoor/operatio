@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { MonitorStatus, AggregateType } from '@prisma/client';
 import { PrismaService } from '../database/database.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
+import { MonitorCheckQueue } from './monitor-check.queue';
+import { OutboxWriter } from '../infrastructure/outbox/writers/outbox.writer';
+import { EventType } from '../shared/events/event-types';
 
 const monitorSelect = {
   id: true,
@@ -11,20 +15,43 @@ const monitorSelect = {
   timeout: true,
   status: true,
   isActive: true,
+  lastCheckedAt: true,
+  lastStatusCode: true,
+  lastResponseTimeMs: true,
 } as const;
 
 @Injectable()
 export class MonitorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly monitorCheckQueue: MonitorCheckQueue,
+    private readonly outboxWriter: OutboxWriter,
+  ) {}
 
   async create(organizationId: string, createMonitorDto: CreateMonitorDto): Promise<void> {
-    await this.prisma.monitor.create({
-      data: {
-        organizationId,
-        ...createMonitorDto,
-      },
-      select: { id: true },
+    const monitorId = await this.prisma.$transaction(async (tx) => {
+      const monitor = await tx.monitor.create({
+        data: {
+          organizationId,
+          ...createMonitorDto,
+        },
+        select: { id: true },
+      });
+
+      await this.outboxWriter.writeTx(tx, {
+        aggregateType: AggregateType.Monitor,
+        aggregateId: monitor.id,
+        eventType: EventType.MONITOR_CREATED,
+        payload: {
+          monitorId: monitor.id,
+          organizationId,
+        },
+      });
+
+      return monitor.id;
     });
+
+    await this.monitorCheckQueue.enqueue(monitorId);
   }
 
   async findAll(organizationId: string) {
@@ -53,13 +80,22 @@ export class MonitorsService {
     monitorId: string,
     updateMonitorDto: UpdateMonitorDto,
   ): Promise<void> {
+    const shouldCheck =
+      updateMonitorDto.url !== undefined || updateMonitorDto.isActive === true;
     const result = await this.prisma.monitor.updateMany({
       where: { id: monitorId, organizationId },
-      data: updateMonitorDto,
+      data: {
+        ...updateMonitorDto,
+        ...(shouldCheck ? { status: MonitorStatus.PENDING } : {}),
+      },
     });
 
     if (result.count === 0) {
       throw new NotFoundException('Monitor not found');
+    }
+
+    if (shouldCheck) {
+      await this.monitorCheckQueue.enqueue(monitorId);
     }
   }
 

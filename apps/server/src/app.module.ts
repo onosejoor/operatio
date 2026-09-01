@@ -10,6 +10,7 @@ import { PrismaModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { MonitorsModule } from './monitors/monitors.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { QueuesModule } from './queues/queues.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -20,6 +21,7 @@ import { RedisModule } from './redis/redis.module';
     PrismaModule,
     RedisModule,
     QueuesModule,
+    OutboxModule,
     HealthModule,
     AuthModule,
     OrganizationsModule,

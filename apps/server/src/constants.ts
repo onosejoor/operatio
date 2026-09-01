@@ -26,3 +26,6 @@ export const RATE_LIMITS = {
     },
   },
 } as const;
+
+export const MONITOR_CHECK_QUEUE = 'monitor-checks';
+export const MONITOR_CHECK_JOB = 'check-monitor';
