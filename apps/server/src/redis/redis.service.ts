@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AppConfigService } from '../config/service/app-config.service';
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -14,7 +14,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private appConfig: AppConfigService) {
     const redisUrl = this.appConfig.get('redis.url');
-    const redisConfig: any = {
+    const redisConfig: RedisOptions = {
       maxRetriesPerRequest: null,
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);

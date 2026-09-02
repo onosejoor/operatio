@@ -19,7 +19,37 @@ async function bootstrap() {
   const appConfig = app.get(AppConfigService);
   const logger = new Logger('Bootstrap');
 
-  app.use(helmet);
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "script-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "cdn.jsdelivr.net",
+          "https://cdn.jsdelivr.net",
+        ],
+        "script-src-elem": [
+          "'self'",
+          "'unsafe-inline'",
+          "cdn.jsdelivr.net",
+          "https://cdn.jsdelivr.net",
+        ],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "cdn.jsdelivr.net",
+          "https://cdn.jsdelivr.net",
+        ],
+        "img-src": [
+          "'self'",
+          "data:",
+          "cdn.jsdelivr.net",
+          "https://cdn.jsdelivr.net",
+        ],
+      },
+    },
+  }),);
   app.use(cookieParser());
 
   // Global API prefix

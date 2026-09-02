@@ -34,12 +34,12 @@ describe('MonitorsService', () => {
       interval: 60,
       timeout: 10_000,
     };
-    prisma.monitor.create.mockResolvedValue({ id: 'monitor-id' });
+    transaction.monitor.create.mockResolvedValue({ id: 'monitor-id' });
 
     await expect(
       service.create('organization-id', input),
     ).resolves.toBeUndefined();
-    expect(prisma.monitor.create).toHaveBeenCalledWith({
+    expect(transaction.monitor.create).toHaveBeenCalledWith({
       data: { organizationId: 'organization-id', ...input },
       select: { id: true },
     });
