@@ -4,9 +4,7 @@ import { HttpClientService } from '../common/http/http-client.service';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { OutboxModule } from '../infrastructure/outbox/outbox.module';
 import { MonitorsController } from './monitors.controller';
-import { MonitorCheckQueue } from './checker/monitor-check.queue';
 import { MonitorCheckService } from './checker/monitor-check.service';
-import { MonitorCheckWorker } from './checker/monitor-check.worker';
 import { MonitorsService } from './monitors.service';
 import { MonitorConsumer } from './consumers/monitor.consumer';
 
@@ -16,9 +14,7 @@ import { MonitorConsumer } from './consumers/monitor.consumer';
   providers: [
     HttpClientService,
     MonitorsService,
-    MonitorCheckQueue,
     MonitorCheckService,
-    MonitorCheckWorker,
     MonitorConsumer,
   ],
 })

@@ -95,4 +95,23 @@ export class OutboxRepository {
       );
     }
   }
+
+  async isProcessed(idempotencyKey: string): Promise<boolean> {
+    const event = await this.prisma.outboxEvent.findUnique({
+      where: { idempotencyKey },
+      select: { status: true },
+    });
+    return event?.status === OutboxStatus.PROCESSED;
+  }
+
+  async markProcessedByKey(idempotencyKey: string): Promise<void> {
+    await this.prisma.outboxEvent.update({
+      where: { idempotencyKey },
+      data: {
+        status: OutboxStatus.PROCESSED,
+        processedAt: new Date(),
+      },
+    });
+    this.logger.log(`Event with idempotencyKey ${idempotencyKey} marked as processed`);
+  }
 }

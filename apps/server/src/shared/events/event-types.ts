@@ -9,6 +9,7 @@ export const EventType = {
   MONITOR_CREATED: buildEventType(AggregateType.Monitor, 'Created'),
   MONITOR_UPDATED: buildEventType(AggregateType.Monitor, 'Updated'),
   MONITOR_DELETED: buildEventType(AggregateType.Monitor, 'Deleted'),
+  MONITOR_CHECK_REQUESTED: buildEventType(AggregateType.Monitor, 'CheckRequested'),
   INCIDENT_CREATED: buildEventType(AggregateType.Incident, 'Created'),
   INCIDENT_RESOLVED: buildEventType(AggregateType.Incident, 'Resolved'),
 } as const;

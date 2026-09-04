@@ -17,6 +17,6 @@ import { DiscoveryModule } from '@nestjs/core';
     EventDispatcher,
     EventHandlerRegistrar,
   ],
-  exports: [OutboxWriter, EventDispatcher],
+  exports: [OutboxWriter, EventDispatcher, OutboxRepository],
 })
 export class OutboxModule {}

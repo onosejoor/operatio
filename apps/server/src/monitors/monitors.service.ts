@@ -3,9 +3,9 @@ import { MonitorStatus, AggregateType } from '@prisma/client';
 import { PrismaService } from '../database/database.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
-import { MonitorCheckQueue } from './checker/monitor-check.queue';
 import { OutboxWriter } from '../infrastructure/outbox/writers/outbox.writer';
 import { EventType } from '../shared/events/event-types';
+import { PRISMA_TRANSACTION_TIMEOUT } from '@/constants';
 
 const monitorSelect = {
   id: true,
@@ -24,7 +24,6 @@ const monitorSelect = {
 export class MonitorsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly monitorCheckQueue: MonitorCheckQueue,
     private readonly outboxWriter: OutboxWriter,
   ) {}
 
@@ -32,30 +31,41 @@ export class MonitorsService {
     organizationId: string,
     createMonitorDto: CreateMonitorDto,
   ): Promise<void> {
-    const monitorId = await this.prisma.$transaction(async (tx) => {
-      const monitor = await tx.monitor.create({
-        data: {
-          organizationId,
-          ...createMonitorDto,
-        },
-        select: { id: true },
-      });
+    const monitorId = await this.prisma.$transaction(
+      async (tx) => {
+        const monitor = await tx.monitor.create({
+          data: {
+            organizationId,
+            ...createMonitorDto,
+          },
+          select: { id: true },
+        });
 
-      await this.outboxWriter.writeTx(tx, {
-        aggregateType: AggregateType.Monitor,
-        idempotencyKey: `monitor-created-${monitor.id}`,
-        aggregateId: monitor.id,
-        eventType: EventType.MONITOR_CREATED,
-        payload: {
-          monitorId: monitor.id,
-          organizationId,
-        },
-      });
+        // await this.outboxWriter.writeTx(tx, {
+        //   aggregateType: AggregateType.Monitor,
+        //   idempotencyKey: `monitor-created-${monitor.id}`,
+        //   aggregateId: monitor.id,
+        //   eventType: EventType.MONITOR_CREATED,
+        //   payload: {
+        //     monitorId: monitor.id,
+        //     organizationId,
+        //   },
+        // });
 
-      return monitor.id;
-    });
+        await this.outboxWriter.writeTx(tx, {
+          aggregateType: AggregateType.Monitor,
+          idempotencyKey: `monitor-check-requested-${monitor.id}`,
+          aggregateId: monitor.id,
+          eventType: EventType.MONITOR_CHECK_REQUESTED,
+          payload: {
+            monitorId: monitor.id,
+          },
+        });
 
-    await this.monitorCheckQueue.enqueue(monitorId);
+        return monitor.id;
+      },
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
   }
 
   async findAll(organizationId: string) {
@@ -99,7 +109,15 @@ export class MonitorsService {
     }
 
     if (shouldCheck) {
-      await this.monitorCheckQueue.enqueue(monitorId);
+      await this.outboxWriter.write({
+        aggregateType: AggregateType.Monitor,
+        idempotencyKey: `monitor-check-requested-${monitorId}-${Date.now()}`,
+        aggregateId: monitorId,
+        eventType: EventType.MONITOR_CHECK_REQUESTED,
+        payload: {
+          monitorId,
+        },
+      });
     }
   }
 

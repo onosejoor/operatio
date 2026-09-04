@@ -3,9 +3,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OutboxRepository } from '../repositories/outbox.repository';
 import { EventDispatcher } from './event-dispatcher';
 import { OutboxEvent } from '@prisma/client';
+import { EventMessage } from '../types/outbox.types';
 
 const MAX_ATTEMPTS = 5;
-const RETRY_DELAYS = [30000, 60000, 300000, 600000]; // 30s, 1m, 5m, 10m
+const RETRY_DELAY_MS = 5000; // flat 5s between attempts
 
 @Injectable()
 export class OutboxDispatcher {
@@ -52,20 +53,25 @@ export class OutboxDispatcher {
     );
 
     try {
-      const payload = JSON.parse(event.payload);
-
       if (!this.eventDispatcher.hasHandler(event.eventType)) {
         throw new Error(
           `No handler registered for event type: ${event.eventType}`,
         );
       }
 
-      await this.eventDispatcher.dispatch(event.eventType, payload);
+      const message: EventMessage = {
+        idempotencyKey: event.idempotencyKey,
+        payload: event.payload,
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        eventType: event.eventType,
+      };
 
-      await this.outboxRepository.markProcessed(event.id);
+      await this.eventDispatcher.dispatch(event.eventType, message);
 
+      // No markProcessed() here — the handler already did it via idempotencyKey.
       this.logger.log(
-        `Event ${event.id} (${event.eventType}) processed successfully`,
+        `Event ${event.id} (${event.eventType}) dispatched successfully`,
       );
     } catch (error) {
       this.logger.error(
@@ -81,14 +87,12 @@ export class OutboxDispatcher {
           `Event ${event.id} permanently failed after ${MAX_ATTEMPTS} attempts`,
         );
       } else {
-        const retryDelay =
-          RETRY_DELAYS[Math.min(nextAttempt - 1, RETRY_DELAYS.length - 1)];
         await this.outboxRepository.incrementAttemptsAndScheduleRetry(
           event.id,
-          retryDelay,
+          RETRY_DELAY_MS,
         );
         this.logger.log(
-          `Event ${event.id} scheduled for retry in ${retryDelay}ms (attempt ${nextAttempt}/${MAX_ATTEMPTS})`,
+          `Event ${event.id} scheduled for retry in ${RETRY_DELAY_MS}ms (attempt ${nextAttempt}/${MAX_ATTEMPTS})`,
         );
       }
     }

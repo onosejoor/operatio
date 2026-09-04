@@ -29,3 +29,5 @@ export const RATE_LIMITS = {
 
 export const MONITOR_CHECK_QUEUE = 'monitor-checks';
 export const MONITOR_CHECK_JOB = 'check-monitor';
+
+export const PRISMA_TRANSACTION_TIMEOUT = 30000
