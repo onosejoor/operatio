@@ -7,7 +7,7 @@ import { WriteOutboxEvent } from '../types/outbox.types';
 export class OutboxWriter {
   private readonly logger = new Logger(OutboxWriter.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async write(event: WriteOutboxEvent): Promise<void> {
     await this.prisma.outboxEvent.create({
@@ -16,6 +16,7 @@ export class OutboxWriter {
         aggregateId: event.aggregateId,
         eventType: event.eventType,
         status: OutboxStatus.PENDING,
+        idempotencyKey: event.idempotencyKey,
         payload: JSON.stringify(event.payload),
       },
     });
@@ -33,9 +34,10 @@ export class OutboxWriter {
       data: {
         aggregateType: event.aggregateType,
         aggregateId: event.aggregateId,
+        idempotencyKey: event.idempotencyKey,
         eventType: event.eventType,
         payload: JSON.stringify(event.payload),
-        status: OutboxStatus.PENDING
+        status: OutboxStatus.PENDING,
       },
     });
 

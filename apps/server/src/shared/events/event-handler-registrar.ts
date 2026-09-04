@@ -61,8 +61,8 @@ export class EventHandlerRegistrar implements OnApplicationBootstrap {
         
         // Create an EventHandler-compatible wrapper
         const handler: EventHandler = {
-          handle: async (payload: unknown) => {
-            await boundMethod(payload);
+          handle: async (message) => {
+            await boundMethod(message);
           },
         };
 

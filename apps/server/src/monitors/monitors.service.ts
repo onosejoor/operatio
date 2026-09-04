@@ -26,9 +26,12 @@ export class MonitorsService {
     private readonly prisma: PrismaService,
     private readonly monitorCheckQueue: MonitorCheckQueue,
     private readonly outboxWriter: OutboxWriter,
-  ) { }
+  ) {}
 
-  async create(organizationId: string, createMonitorDto: CreateMonitorDto): Promise<void> {
+  async create(
+    organizationId: string,
+    createMonitorDto: CreateMonitorDto,
+  ): Promise<void> {
     const monitorId = await this.prisma.$transaction(async (tx) => {
       const monitor = await tx.monitor.create({
         data: {
@@ -40,6 +43,7 @@ export class MonitorsService {
 
       await this.outboxWriter.writeTx(tx, {
         aggregateType: AggregateType.Monitor,
+        idempotencyKey: `monitor-created-${monitor.id}`,
         aggregateId: monitor.id,
         eventType: EventType.MONITOR_CREATED,
         payload: {

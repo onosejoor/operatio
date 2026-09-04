@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventHandler } from 'src/shared/events/event-handler.decorator';
 import { EventType } from 'src/shared/events/event-types';
+import { type EventMessage } from '@/infrastructure/outbox/types/outbox.types';
 
 interface MonitorCreatedPayload {
   monitorId: string;
@@ -23,7 +24,8 @@ export class MonitorConsumer {
   private readonly logger = new Logger(MonitorConsumer.name);
 
   @EventHandler(EventType.MONITOR_CREATED)
-  async handleMonitorCreated(payload: MonitorCreatedPayload): Promise<void> {
+  async handleMonitorCreated(message: EventMessage): Promise<void> {
+    const payload: MonitorCreatedPayload = JSON.parse(message.payload);
     this.logger.log(
       `Monitor created event received: ${payload.monitorId} for organization ${payload.organizationId}`,
     );
@@ -33,7 +35,8 @@ export class MonitorConsumer {
   }
 
   @EventHandler(EventType.MONITOR_UPDATED)
-  async handleMonitorUpdated(payload: MonitorUpdatedPayload): Promise<void> {
+  async handleMonitorUpdated(message: EventMessage): Promise<void> {
+    const payload: MonitorUpdatedPayload = JSON.parse(message.payload);
     this.logger.log(
       `Monitor updated event received: ${payload.monitorId} for organization ${payload.organizationId}`,
     );
@@ -43,7 +46,8 @@ export class MonitorConsumer {
   }
 
   @EventHandler(EventType.MONITOR_DELETED)
-  async handleMonitorDeleted(payload: MonitorDeletedPayload): Promise<void> {
+  async handleMonitorDeleted(message: EventMessage): Promise<void> {
+    const payload: MonitorDeletedPayload = JSON.parse(message.payload);
     this.logger.log(
       `Monitor deleted event received: ${payload.monitorId} for organization ${payload.organizationId}`,
     );

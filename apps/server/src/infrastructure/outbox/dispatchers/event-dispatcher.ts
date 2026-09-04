@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventHandler } from '@/shared/events/event-handler.interface';
+import { EventMessage } from '@/infrastructure/outbox/types/outbox.types';
 
 @Injectable()
 export class EventDispatcher {
@@ -16,7 +17,7 @@ export class EventDispatcher {
     );
   }
 
-  async dispatch(eventType: string, payload: unknown): Promise<void> {
+  async dispatch(eventType: string, message: EventMessage): Promise<void> {
     const handlers = this.handlers.get(eventType);
 
     if (!handlers || handlers.length === 0) {
@@ -28,7 +29,7 @@ export class EventDispatcher {
     );
 
     for (const handler of handlers) {
-      await handler.handle(payload);
+      await handler.handle(message);
     }
 
     this.logger.log(`Event dispatched successfully: ${eventType}`);

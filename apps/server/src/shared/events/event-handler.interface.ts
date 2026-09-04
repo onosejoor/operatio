@@ -1,3 +1,5 @@
-export interface EventHandler<TPayload = unknown> {
-  handle(payload: TPayload): Promise<void>;
+import { EventMessage } from '@/infrastructure/outbox/types/outbox.types';
+
+export interface EventHandler {
+  handle(message: EventMessage): Promise<void>;
 }

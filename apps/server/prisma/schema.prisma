@@ -92,7 +92,7 @@ model Monitor {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   checks       MonitorCheck[]
 
   @@index([organizationId])
@@ -129,16 +129,17 @@ model Token {
 }
 
 model OutboxEvent {
-  id           String       @id @default(auto()) @map("_id") @db.ObjectId
-  aggregateType AggregateType
-  aggregateId  String
-  eventType    String
-  payload      String
-  status       OutboxStatus @default(PENDING)
-  attempts     Int          @default(0)
-  availableAt  DateTime     @default(now())
-  createdAt    DateTime     @default(now())
-  processedAt  DateTime?
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  aggregateType  AggregateType
+  aggregateId    String
+  eventType      String
+  payload        String
+  idempotencyKey String        @unique
+  status         OutboxStatus  @default(PENDING)
+  attempts       Int           @default(0)
+  availableAt    DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  processedAt    DateTime?
 
   @@index([status, availableAt])
   @@map("outbox_events")
