@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { OutboxStatus, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../../database/database.service';
 import { WriteOutboxEvent } from '../types/outbox.types';
 
@@ -7,7 +7,7 @@ import { WriteOutboxEvent } from '../types/outbox.types';
 export class OutboxWriter {
   private readonly logger = new Logger(OutboxWriter.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async write(event: WriteOutboxEvent): Promise<void> {
     await this.prisma.outboxEvent.create({
@@ -15,6 +15,7 @@ export class OutboxWriter {
         aggregateType: event.aggregateType,
         aggregateId: event.aggregateId,
         eventType: event.eventType,
+        status: OutboxStatus.PENDING,
         payload: JSON.stringify(event.payload),
       },
     });
@@ -34,6 +35,7 @@ export class OutboxWriter {
         aggregateId: event.aggregateId,
         eventType: event.eventType,
         payload: JSON.stringify(event.payload),
+        status: OutboxStatus.PENDING
       },
     });
 
