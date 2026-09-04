@@ -30,8 +30,8 @@ export class PrismaService
 
     if (appConfig.get('app.nodeEnv') === 'development') {
       this.$on('query' as never, (e: any) => {
-        this.logger.debug(`Query: ${e.query}`);
-        this.logger.debug(`Duration: ${e.duration}ms`);
+        //     this.logger.debug(`Query: ${e.query}`);
+        this.logger.debug(`Query Duration: ${e.duration}ms`);
       });
     }
   }
