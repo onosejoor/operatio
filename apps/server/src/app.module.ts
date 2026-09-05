@@ -13,6 +13,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { QueuesModule } from './queues/queues.module';
 import { RedisModule } from './redis/redis.module';
+import { IncidentsModule } from './incidents/incidents.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RedisModule } from './redis/redis.module';
     AuthModule,
     OrganizationsModule,
     MonitorsModule,
+    IncidentsModule,
   ],
   controllers: [AppController],
   providers: [

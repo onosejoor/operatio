@@ -1,3 +1,7 @@
+import { Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { DefaultArgs } from '@prisma/client/runtime/library';
+
 export const RATE_LIMITS = {
   default: {
     ttl: 60_000,
@@ -30,4 +34,9 @@ export const RATE_LIMITS = {
 export const MONITOR_CHECK_QUEUE = 'monitor-checks';
 export const MONITOR_CHECK_JOB = 'check-monitor';
 
-export const PRISMA_TRANSACTION_TIMEOUT = 30000
+export const PRISMA_TRANSACTION_TIMEOUT = 30000;
+
+export type PrismaTransactionType = Omit<
+  PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'
+>;

@@ -8,9 +8,10 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { OrganizationMembershipGuard } from '../common/guards/organization-membership.guard';
 import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
@@ -117,5 +118,35 @@ export class MonitorsController {
   ) {
     await this.monitorsService.disable(organizationId, monitorId);
     return ApiResponseDto.success(undefined, 'Monitor disabled successfully');
+  }
+
+  @Get(':monitorId/checks')
+  @ApiOperation({ summary: 'Get monitor check history' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
+  async getChecks(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('monitorId') monitorId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return ApiResponseDto.success(
+      await this.monitorsService.getChecks(organizationId, monitorId, pageNum, limitNum),
+    );
+  }
+
+  @Get(':monitorId/stats')
+  @ApiOperation({ summary: 'Get monitor statistics' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async getStats(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('monitorId') monitorId: string,
+  ) {
+    return ApiResponseDto.success(
+      await this.monitorsService.getStats(organizationId, monitorId),
+    );
   }
 }

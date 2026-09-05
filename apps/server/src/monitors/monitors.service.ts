@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { MonitorStatus, AggregateType } from '@prisma/client';
+import { MonitorStatus, AggregateType, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/database.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
@@ -18,6 +18,7 @@ const monitorSelect = {
   lastCheckedAt: true,
   lastStatusCode: true,
   lastResponseTimeMs: true,
+  nextCheckAt: true,
 } as const;
 
 @Injectable()
@@ -31,12 +32,17 @@ export class MonitorsService {
     organizationId: string,
     createMonitorDto: CreateMonitorDto,
   ): Promise<void> {
-    const monitorId = await this.prisma.$transaction(
+    await this.prisma.$transaction(
       async (tx) => {
+        const nextCheckAt = new Date(
+          Date.now() + createMonitorDto.interval * 1000,
+        );
+
         const monitor = await tx.monitor.create({
           data: {
             organizationId,
             ...createMonitorDto,
+            nextCheckAt,
           },
           select: { id: true },
         });
@@ -95,18 +101,50 @@ export class MonitorsService {
     updateMonitorDto: UpdateMonitorDto,
   ): Promise<void> {
     const shouldCheck =
-      updateMonitorDto.url !== undefined || updateMonitorDto.isActive === true;
+      updateMonitorDto.isActive === true || updateMonitorDto.url !== undefined;
+
+    const updateData: Prisma.MonitorUpdateInput = { ...updateMonitorDto };
+
+    if (updateMonitorDto.interval !== undefined) {
+      const monitor = await this.prisma.monitor.findFirst({
+        where: { id: monitorId, organizationId },
+        select: { interval: true },
+      });
+
+      if (monitor) {
+        updateData.nextCheckAt = new Date(
+          Date.now() + updateMonitorDto.interval * 1000,
+        );
+      }
+    }
+
+    if (
+      updateMonitorDto.url !== undefined ||
+      updateMonitorDto.isActive === true
+    ) {
+      updateData.status = MonitorStatus.PENDING;
+    }
+
     const result = await this.prisma.monitor.updateMany({
       where: { id: monitorId, organizationId },
-      data: {
-        ...updateMonitorDto,
-        ...(shouldCheck ? { status: MonitorStatus.PENDING } : {}),
-      },
+      data: updateData,
     });
 
     if (result.count === 0) {
       throw new NotFoundException('Monitor not found');
     }
+
+    // await this.outboxWriter.write({
+    //   aggregateType: AggregateType.Monitor,
+    //   idempotencyKey: `monitor-updated-${monitorId}-${Date.now()}`,
+    //   aggregateId: monitorId,
+    //   eventType: EventType.MONITOR_UPDATED,
+    //   payload: {
+    //     monitorId,
+    //     organizationId,
+    //     changes: updateMonitorDto,
+    //   },
+    // });
 
     if (shouldCheck) {
       await this.outboxWriter.write({
@@ -130,5 +168,91 @@ export class MonitorsService {
     if (result.count === 0) {
       throw new NotFoundException('Monitor not found');
     }
+  }
+
+  async getChecks(
+    organizationId: string,
+    monitorId: string,
+    page: number = 1,
+    limit: number = 50,
+  ) {
+    const monitor = await this.prisma.monitor.findFirst({
+      where: { id: monitorId, organizationId },
+    });
+
+    if (!monitor) {
+      throw new NotFoundException('Monitor not found');
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [checks, total] = await Promise.all([
+      this.prisma.monitorCheck.findMany({
+        where: { monitorId },
+        orderBy: { checkedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.monitorCheck.count({
+        where: { monitorId },
+      }),
+    ]);
+
+    return {
+      data: checks,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getStats(organizationId: string, monitorId: string) {
+    const monitor = await this.prisma.monitor.findFirst({
+      where: { id: monitorId, organizationId },
+    });
+
+    if (!monitor) {
+      throw new NotFoundException('Monitor not found');
+    }
+
+    const checks = await this.prisma.monitorCheck.findMany({
+      where: { monitorId },
+      orderBy: { checkedAt: 'desc' },
+      take: 1000,
+    });
+
+    if (checks.length === 0) {
+      return {
+        checkSuccessRate: 0,
+        averageResponseTime: 0,
+        totalChecks: 0,
+        successfulChecks: 0,
+        failedChecks: 0,
+        latestStatus: monitor.status,
+      };
+    }
+
+    const successfulChecks = checks.filter(
+      (check) => check.status === MonitorStatus.UP,
+    ).length;
+    const failedChecks = checks.filter(
+      (check) => check.status === MonitorStatus.DOWN,
+    ).length;
+    const checkSuccessRate = (successfulChecks / checks.length) * 100;
+    const averageResponseTime =
+      checks.reduce((sum, check) => sum + check.responseTimeMs, 0) /
+      checks.length;
+
+    return {
+      checkSuccessRate: Math.round(checkSuccessRate * 100) / 100,
+      averageResponseTime: Math.round(averageResponseTime),
+      totalChecks: checks.length,
+      successfulChecks,
+      failedChecks,
+      latestStatus: monitor.status,
+    };
   }
 }

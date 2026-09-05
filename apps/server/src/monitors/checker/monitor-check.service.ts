@@ -1,9 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MonitorStatus } from '@prisma/client';
+import { MonitorStatus, AggregateType } from '@prisma/client';
 import axios from 'axios';
 import { HttpClientService } from '../../common/http/http-client.service';
 import { PrismaService } from '../../database/database.service';
+import { OutboxWriter } from '../../infrastructure/outbox/writers/outbox.writer';
+import { EventType } from '../../shared/events/event-types';
 import type { MonitorCheckResult } from '../types/monitor-check.types';
+import { PRISMA_TRANSACTION_TIMEOUT, PrismaTransactionType } from '@/constants';
 
 @Injectable()
 export class MonitorCheckService {
@@ -12,12 +15,21 @@ export class MonitorCheckService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpClient: HttpClientService,
-  ) { }
+    private readonly outboxWriter: OutboxWriter,
+  ) {}
 
   async execute(monitorId: string): Promise<void> {
     const monitor = await this.prisma.monitor.findUnique({
       where: { id: monitorId },
-      select: { id: true, url: true, timeout: true, isActive: true },
+      select: {
+        id: true,
+        url: true,
+        timeout: true,
+        isActive: true,
+        interval: true,
+        status: true,
+        organizationId: true,
+      },
     });
 
     if (!monitor || !monitor.isActive) {
@@ -27,28 +39,74 @@ export class MonitorCheckService {
     const result = await this.requestUrl(monitor.url, monitor.timeout);
     const checkedAt = new Date();
 
-    await this.prisma.$transaction(async (transaction) => {
-      await transaction.monitorCheck.create({
-        data: {
-          monitorId: monitor.id,
-          ...result,
+    await this.prisma.$transaction(
+      async (transaction) => {
+        await transaction.monitorCheck.create({
+          data: {
+            monitorId: monitor.id,
+            ...result,
+            checkedAt,
+          },
+        });
+
+        await this.handleStatusTransition(
+          transaction,
+          monitor.id,
+          monitor.organizationId,
+          monitor.status,
+          result.status,
           checkedAt,
-        },
-      });
-      await transaction.monitor.update({
-        where: { id: monitor.id },
-        data: {
-          status: result.status,
-          lastCheckedAt: checkedAt,
-          lastStatusCode: result.statusCode,
-          lastResponseTimeMs: result.responseTimeMs,
-        },
-      });
-    });
+        );
+
+        await transaction.monitor.update({
+          where: { id: monitor.id },
+          data: {
+            status: result.status,
+            lastCheckedAt: checkedAt,
+            lastStatusCode: result.statusCode,
+            lastResponseTimeMs: result.responseTimeMs,
+          },
+        });
+      },
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
 
     this.logger.log(
       `Monitor ${monitor.id} checked: ${result.status} in ${result.responseTimeMs}ms`,
     );
+  }
+
+  private async handleStatusTransition(
+    tx: PrismaTransactionType,
+    monitorId: string,
+    organizationId: string,
+    previousStatus: MonitorStatus,
+    newStatus: MonitorStatus,
+    checkedAt: Date,
+  ): Promise<void> {
+    if (previousStatus === MonitorStatus.PENDING) {
+      return;
+    }
+
+    if (previousStatus !== newStatus) {
+      await this.outboxWriter.writeTx(tx, {
+        aggregateType: AggregateType.Monitor,
+        idempotencyKey: `monitor-status-changed-${monitorId}-${checkedAt.getTime()}`,
+        aggregateId: monitorId,
+        eventType: EventType.MONITOR_STATUS_CHANGED,
+        payload: {
+          monitorId,
+          organizationId,
+          previousStatus,
+          newStatus,
+          checkedAt: checkedAt.toISOString(),
+        },
+      });
+
+      this.logger.log(
+        `Monitor ${monitorId} status changed from ${previousStatus} to ${newStatus}`,
+      );
+    }
   }
 
   private async requestUrl(
@@ -85,7 +143,7 @@ export class MonitorCheckService {
 
   private getFailureReason(error: unknown): string {
     if (axios.isAxiosError(error)) {
-      return error.message || error.code || ""
+      return error.message || error.code || '';
     }
 
     return error instanceof Error ? error.message : 'Request failed';

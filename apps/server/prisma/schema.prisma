@@ -58,6 +58,7 @@ model Organization {
 
   memberships Membership[]
   monitors    Monitor[]
+  incidents   Incident[]
 
   @@map("organizations")
 }
@@ -89,13 +90,16 @@ model Monitor {
   lastCheckedAt      DateTime?
   lastStatusCode     Int?
   lastResponseTimeMs Int?
+  nextCheckAt        DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   checks       MonitorCheck[]
+  incidents    Incident[]
 
   @@index([organizationId])
+  @@index([isActive, nextCheckAt])
   @@map("monitors")
 }
 
@@ -112,6 +116,23 @@ model MonitorCheck {
 
   @@index([monitorId, checkedAt])
   @@map("monitor_checks")
+}
+
+model Incident {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  monitorId      String        @db.ObjectId
+  organizationId String        @db.ObjectId
+  startedAt      DateTime      @default(now())
+  resolvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  monitor       Monitor       @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, startedAt])
+  @@index([organizationId])
+  @@map("incidents")
 }
 
 model Token {

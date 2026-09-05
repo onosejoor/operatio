@@ -1,6 +1,7 @@
 import { MonitorStatus } from '@prisma/client';
 import { MonitorCheckService } from '../checker/monitor-check.service';
 import { HttpClientService } from '../../common/http/http-client.service';
+import { OutboxWriter } from '../../infrastructure/outbox/writers/outbox.writer';
 
 describe('MonitorCheckService', () => {
   const transaction = {
@@ -14,7 +15,10 @@ describe('MonitorCheckService', () => {
   const httpClient: Pick<HttpClientService, 'get'> = {
     get: jest.fn(),
   };
-  const service = new MonitorCheckService(prisma as never, httpClient as HttpClientService);
+  const outboxWriter: Pick<OutboxWriter, 'writeTx'> = {
+    writeTx: jest.fn(),
+  };
+  const service = new MonitorCheckService(prisma as never, httpClient as HttpClientService, outboxWriter as OutboxWriter);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,6 +34,10 @@ describe('MonitorCheckService', () => {
       url: 'https://api.example.com/health',
       timeout: 10_000,
       isActive: true,
+      interval: 60,
+      status: MonitorStatus.UP,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
     });
     (httpClient.get as jest.Mock).mockResolvedValue({ status: 200 });
 
@@ -54,6 +62,7 @@ describe('MonitorCheckService', () => {
         status: MonitorStatus.UP,
         lastStatusCode: 200,
         lastResponseTimeMs: expect.any(Number),
+        nextCheckAt: expect.any(Date),
       }),
     });
   });
@@ -64,6 +73,10 @@ describe('MonitorCheckService', () => {
       url: 'https://api.example.com/health',
       timeout: 10_000,
       isActive: true,
+      interval: 60,
+      status: MonitorStatus.UP,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
     });
     (httpClient.get as jest.Mock).mockResolvedValue({ status: 503 });
 
@@ -78,12 +91,98 @@ describe('MonitorCheckService', () => {
     });
   });
 
+  it('creates status changed event when monitor transitions from UP to DOWN', async () => {
+    prisma.monitor.findUnique.mockResolvedValue({
+      id: 'monitor-id',
+      url: 'https://api.example.com/health',
+      timeout: 10_000,
+      isActive: true,
+      interval: 60,
+      status: MonitorStatus.UP,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
+    });
+    (httpClient.get as jest.Mock).mockResolvedValue({ status: 503 });
+
+    await service.execute('monitor-id');
+
+    expect(outboxWriter.writeTx).toHaveBeenCalledWith(
+      transaction,
+      expect.objectContaining({
+        eventType: 'monitor.statuschanged',
+      }),
+    );
+  });
+
+  it('creates status changed event when monitor transitions from DOWN to UP', async () => {
+    prisma.monitor.findUnique.mockResolvedValue({
+      id: 'monitor-id',
+      url: 'https://api.example.com/health',
+      timeout: 10_000,
+      isActive: true,
+      interval: 60,
+      status: MonitorStatus.DOWN,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
+    });
+    (httpClient.get as jest.Mock).mockResolvedValue({ status: 200 });
+
+    await service.execute('monitor-id');
+
+    expect(outboxWriter.writeTx).toHaveBeenCalledWith(
+      transaction,
+      expect.objectContaining({
+        eventType: 'monitor.statuschanged',
+      }),
+    );
+  });
+
+  it('does not create status changed event when monitor stays DOWN', async () => {
+    prisma.monitor.findUnique.mockResolvedValue({
+      id: 'monitor-id',
+      url: 'https://api.example.com/health',
+      timeout: 10_000,
+      isActive: true,
+      interval: 60,
+      status: MonitorStatus.DOWN,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
+    });
+    (httpClient.get as jest.Mock).mockResolvedValue({ status: 503 });
+
+    await service.execute('monitor-id');
+
+    expect(outboxWriter.writeTx).not.toHaveBeenCalled();
+  });
+
+  it('does not create status changed event when monitor stays UP', async () => {
+    prisma.monitor.findUnique.mockResolvedValue({
+      id: 'monitor-id',
+      url: 'https://api.example.com/health',
+      timeout: 10_000,
+      isActive: true,
+      interval: 60,
+      status: MonitorStatus.UP,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
+    });
+    (httpClient.get as jest.Mock).mockResolvedValue({ status: 200 });
+
+    await service.execute('monitor-id');
+
+    expect(outboxWriter.writeTx).not.toHaveBeenCalled();
+  });
+
   it('records a timeout as a DOWN result without an HTTP status', async () => {
     prisma.monitor.findUnique.mockResolvedValue({
       id: 'monitor-id',
       url: 'https://api.example.com/health',
       timeout: 10_000,
       isActive: true,
+      interval: 60,
+      status: MonitorStatus.UP,
+      organizationId: 'org-id',
+      lastCheckedAt: null,
     });
     (httpClient.get as jest.Mock).mockRejectedValue({ isAxiosError: true, code: 'ECONNABORTED' });
 

@@ -36,8 +36,15 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_CREATED)
   async handleMonitorCreated(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(message.idempotencyKey);
-    if (done) return;
+    const done = await this.outboxRepository.isProcessed(
+      message.idempotencyKey,
+    );
+    if (done) {
+      this.logger.debug(
+        `Monitor created event already processed: ${message.idempotencyKey}`,
+      );
+      return;
+    }
 
     const payload: MonitorCreatedPayload = JSON.parse(message.payload);
     this.logger.log(
@@ -52,8 +59,15 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_UPDATED)
   async handleMonitorUpdated(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(message.idempotencyKey);
-    if (done) return;
+    const done = await this.outboxRepository.isProcessed(
+      message.idempotencyKey,
+    );
+    if (done) {
+      this.logger.debug(
+        `Monitor updated event already processed: ${message.idempotencyKey}`,
+      );
+      return;
+    }
 
     const payload: MonitorUpdatedPayload = JSON.parse(message.payload);
     this.logger.log(
@@ -68,7 +82,9 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_DELETED)
   async handleMonitorDeleted(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(message.idempotencyKey);
+    const done = await this.outboxRepository.isProcessed(
+      message.idempotencyKey,
+    );
     if (done) return;
 
     const payload: MonitorDeletedPayload = JSON.parse(message.payload);
@@ -76,16 +92,20 @@ export class MonitorConsumer {
       `Monitor deleted event received: ${payload.monitorId} for organization ${payload.organizationId}`,
     );
 
-    // Example: Handle monitor deletion (e.g., cleanup resources, notify users, etc.)
-    // This handler is designed to be idempotent - repeated processing should not cause issues
-
     await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
   }
 
   @EventHandler(EventType.MONITOR_CHECK_REQUESTED)
   async handleMonitorCheckRequested(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(message.idempotencyKey);
-    if (done) return;
+    const done = await this.outboxRepository.isProcessed(
+      message.idempotencyKey,
+    );
+    if (done) {
+      this.logger.debug(
+        `Monitor check requested event already processed: ${message.idempotencyKey}`,
+      );
+      return;
+    }
 
     const payload: MonitorCheckRequestedPayload = JSON.parse(message.payload);
     this.logger.log(`Monitor check requested for: ${payload.monitorId}`);
