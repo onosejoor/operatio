@@ -30,19 +30,31 @@ export class OutboxWriter {
     tx: Prisma.TransactionClient,
     event: WriteOutboxEvent,
   ): Promise<void> {
-    await tx.outboxEvent.create({
-      data: {
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-        idempotencyKey: event.idempotencyKey,
-        eventType: event.eventType,
-        payload: JSON.stringify(event.payload),
-        status: OutboxStatus.PENDING,
-      },
-    });
+    try {
+      await tx.outboxEvent.create({
+        data: {
+          aggregateType: event.aggregateType,
+          aggregateId: event.aggregateId,
+          idempotencyKey: event.idempotencyKey,
+          eventType: event.eventType,
+          payload: JSON.stringify(event.payload),
+          status: OutboxStatus.PENDING,
+        },
+      });
 
-    this.logger.log(
-      `Outbox event created in transaction: ${event.eventType} for ${event.aggregateType}:${event.aggregateId}`,
-    );
+      this.logger.log(
+        `Outbox event created in transaction: ${event.eventType} for ${event.aggregateType}:${event.aggregateId}`,
+      );
+    } catch (error) {
+      // If this is a unique constraint violation on idempotencyKey, the event already exists
+      // This is expected behavior for idempotency - we can safely ignore
+      if (error instanceof Error && error.message.includes('unique')) {
+        this.logger.debug(
+          `Outbox event with idempotencyKey ${event.idempotencyKey} already exists, skipping`,
+        );
+        return;
+      }
+      throw error;
+    }
   }
 }

@@ -77,7 +77,9 @@ export class OutboxRepository {
     );
   }
 
-  async resetStuckProcessingEvents(stuckThreshold: number = 300000): Promise<void> {
+  async resetStuckProcessingEvents(
+    stuckThreshold: number = 300000,
+  ): Promise<void> {
     const threshold = new Date(Date.now() - stuckThreshold);
     const result = await this.prisma.outboxEvent.updateMany({
       where: {
@@ -112,6 +114,32 @@ export class OutboxRepository {
         processedAt: new Date(),
       },
     });
-    this.logger.log(`Event with idempotencyKey ${idempotencyKey} marked as processed`);
+    this.logger.log(
+      `Event with idempotencyKey ${idempotencyKey} marked as processed`,
+    );
+  }
+
+  async tryClaimProcessing(idempotencyKey: string): Promise<boolean> {
+    try {
+      await this.prisma.outboxEvent.update({
+        where: { idempotencyKey },
+        data: {
+          status: OutboxStatus.PROCESSING,
+        },
+      });
+      this.logger.log(
+        `Event with idempotencyKey ${idempotencyKey} claimed for processing`,
+      );
+      return true;
+    } catch (error) {
+      this.logger.debug(
+        `Error occurred while trying to claim event with idempotencyKey ${idempotencyKey}: ${error}`,
+      );
+      // If update fails, the event either doesn't exist or is already being processed
+      this.logger.debug(
+        `Failed to claim event with idempotencyKey ${idempotencyKey} - likely already claimed`,
+      );
+      return false;
+    }
   }
 }

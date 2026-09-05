@@ -7,6 +7,7 @@ import { OutboxRepository } from '@/infrastructure/outbox/repositories/outbox.re
 import { PrismaService } from '../../database/database.service';
 import { OutboxWriter } from '../../infrastructure/outbox/writers/outbox.writer';
 import { AggregateType } from '@prisma/client';
+import { PRISMA_TRANSACTION_TIMEOUT, PrismaTransactionType } from '@/constants';
 
 interface MonitorStatusChangedPayload {
   monitorId: string;
@@ -42,12 +43,12 @@ export class IncidentConsumer {
 
   @EventHandler(EventType.MONITOR_STATUS_CHANGED)
   async handleMonitorStatusChanged(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) {
+    if (!claimed) {
       this.logger.debug(
-        `Monitor status changed event already processed: ${message.idempotencyKey}`,
+        `Monitor status changed event already claimed/processed: ${message.idempotencyKey}`,
       );
       return;
     }
@@ -83,79 +84,89 @@ export class IncidentConsumer {
     organizationId: string,
     checkedAt: Date,
   ): Promise<void> {
-    const incident = await this.prisma.incident.create({
-      data: {
-        monitorId,
-        organizationId,
-        startedAt: checkedAt,
-      },
-    });
+    await this.prisma.$transaction(
+      async (tx: PrismaTransactionType) => {
+        const incident = await tx.incident.create({
+          data: {
+            monitorId,
+            organizationId,
+            startedAt: checkedAt,
+          },
+        });
 
-    await this.outboxWriter.write({
-      aggregateType: AggregateType.Incident,
-      idempotencyKey: `incident-created-${incident.id}`,
-      aggregateId: incident.id,
-      eventType: EventType.INCIDENT_CREATED,
-      payload: {
-        incidentId: incident.id,
-        monitorId,
-        organizationId,
-        startedAt: checkedAt.toISOString(),
-      },
-    });
+        await this.outboxWriter.writeTx(tx, {
+          aggregateType: AggregateType.Incident,
+          idempotencyKey: `incident-created-${incident.id}`,
+          aggregateId: incident.id,
+          eventType: EventType.INCIDENT_CREATED,
+          payload: {
+            incidentId: incident.id,
+            monitorId,
+            organizationId,
+            startedAt: checkedAt.toISOString(),
+          },
+        });
 
-    this.logger.log(`Incident created for monitor ${monitorId}`);
+        this.logger.log(`Incident created for monitor ${monitorId}`);
+      },
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
   }
 
   private async handleMonitorUp(
     monitorId: string,
     checkedAt: Date,
   ): Promise<void> {
-    const activeIncident = await this.prisma.incident.findFirst({
-      where: {
-        monitorId,
-        resolvedAt: null,
+    await this.prisma.$transaction(
+      async (tx: PrismaTransactionType) => {
+        const activeIncident = await tx.incident.findFirst({
+          where: {
+            monitorId,
+            resolvedAt: null,
+          },
+          orderBy: {
+            startedAt: 'desc',
+          },
+        });
+
+        if (activeIncident) {
+          await tx.incident.update({
+            where: { id: activeIncident.id },
+            data: {
+              resolvedAt: checkedAt,
+            },
+          });
+
+          await this.outboxWriter.writeTx(tx, {
+            aggregateType: AggregateType.Incident,
+            idempotencyKey: `incident-resolved-${activeIncident.id}`,
+            aggregateId: activeIncident.id,
+            eventType: EventType.INCIDENT_RESOLVED,
+            payload: {
+              incidentId: activeIncident.id,
+              monitorId: activeIncident.monitorId,
+              organizationId: activeIncident.organizationId,
+              resolvedAt: checkedAt.toISOString(),
+            },
+          });
+
+          this.logger.log(
+            `Incident ${activeIncident.id} resolved for monitor ${monitorId}`,
+          );
+        }
       },
-      orderBy: {
-        startedAt: 'desc',
-      },
-    });
-
-    if (activeIncident) {
-      await this.prisma.incident.update({
-        where: { id: activeIncident.id },
-        data: {
-          resolvedAt: checkedAt,
-        },
-      });
-
-      await this.outboxWriter.write({
-        aggregateType: AggregateType.Incident,
-        idempotencyKey: `incident-resolved-${activeIncident.id}`,
-        aggregateId: activeIncident.id,
-        eventType: EventType.INCIDENT_RESOLVED,
-        payload: {
-          incidentId: activeIncident.id,
-          monitorId: activeIncident.monitorId,
-          organizationId: activeIncident.organizationId,
-          resolvedAt: checkedAt.toISOString(),
-        },
-      });
-
-      this.logger.log(
-        `Incident ${activeIncident.id} resolved for monitor ${monitorId}`,
-      );
-    }
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
   }
 
   @EventHandler(EventType.INCIDENT_CREATED)
   async handleIncidentCreated(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) {
+    if (!claimed) {
       this.logger.debug(
-        `Incident created event already processed: ${message.idempotencyKey}`,
+        `Incident created event already claimed/processed: ${message.idempotencyKey}`,
       );
       return;
     }
@@ -170,12 +181,12 @@ export class IncidentConsumer {
 
   @EventHandler(EventType.INCIDENT_RESOLVED)
   async handleIncidentResolved(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) {
+    if (!claimed) {
       this.logger.debug(
-        `Incident resolved event already processed: ${message.idempotencyKey}`,
+        `Incident resolved event already claimed/processed: ${message.idempotencyKey}`,
       );
       return;
     }

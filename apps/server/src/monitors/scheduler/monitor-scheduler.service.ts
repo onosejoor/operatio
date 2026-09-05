@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/database.service';
 import { OutboxWriter } from '../../infrastructure/outbox/writers/outbox.writer';
 import { EventType } from '../../shared/events/event-types';
 import { AggregateType, Monitor } from '@prisma/client';
+import { PRISMA_TRANSACTION_TIMEOUT } from '@/constants';
 
 @Injectable()
 export class MonitorSchedulerService {
@@ -61,48 +62,53 @@ export class MonitorSchedulerService {
     interval: number;
     nextCheckAt: Date | null;
   }): Promise<void> {
-    const claimed = await this.prisma.$transaction(async (tx) => {
-      const currentMonitor = await tx.monitor.findUnique({
-        where: { id: monitor.id },
-        select: { nextCheckAt: true, isActive: true },
-      });
+    const claimed = await this.prisma.$transaction(
+      async (tx) => {
+        const currentMonitor = await tx.monitor.findUnique({
+          where: { id: monitor.id },
+          select: { nextCheckAt: true, isActive: true },
+        });
 
-      if (!currentMonitor || !currentMonitor.isActive) {
-        return false;
-      }
+        if (!currentMonitor || !currentMonitor.isActive) {
+          return false;
+        }
 
-      if (monitor.nextCheckAt !== null) {
+        // Verify nextCheckAt hasn't changed (optimistic locking)
         if (
           currentMonitor.nextCheckAt === null ||
-          currentMonitor.nextCheckAt.getTime() !== monitor.nextCheckAt.getTime()
+          currentMonitor.nextCheckAt.getTime() !==
+            monitor.nextCheckAt?.getTime()
         ) {
           return false;
         }
-      } else if (currentMonitor.nextCheckAt !== null) {
-        return false;
-      }
 
-      const now = new Date();
-      const newNextCheckAt = new Date(now.getTime() + monitor.interval * 1000);
+        const now = new Date();
+        const newNextCheckAt = new Date(
+          now.getTime() + monitor.interval * 1000,
+        );
 
-      await tx.monitor.update({
-        where: { id: monitor.id },
-        data: { nextCheckAt: newNextCheckAt },
-      });
+        await tx.monitor.update({
+          where: { id: monitor.id },
+          data: { nextCheckAt: newNextCheckAt },
+        });
 
-      return true;
-    });
+        // Write outbox event within the same transaction
+        await this.outboxWriter.writeTx(tx, {
+          aggregateType: AggregateType.Monitor,
+          idempotencyKey: `monitor-check-requested-${monitor.id}-${Date.now()}`,
+          aggregateId: monitor.id,
+          eventType: EventType.MONITOR_CHECK_REQUESTED,
+          payload: {
+            monitorId: monitor.id,
+          },
+        });
+
+        return true;
+      },
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
 
     if (claimed) {
-      await this.outboxWriter.write({
-        aggregateType: AggregateType.Monitor,
-        idempotencyKey: `monitor-check-requested-${monitor.id}-${Date.now()}`,
-        aggregateId: monitor.id,
-        eventType: EventType.MONITOR_CHECK_REQUESTED,
-        payload: {
-          monitorId: monitor.id,
-        },
-      });
       this.logger.debug(
         `Claimed and scheduled check for monitor ${monitor.id} (${monitor.name})`,
       );

@@ -36,12 +36,12 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_CREATED)
   async handleMonitorCreated(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) {
+    if (!claimed) {
       this.logger.debug(
-        `Monitor created event already processed: ${message.idempotencyKey}`,
+        `Monitor created event already claimed/processed: ${message.idempotencyKey}`,
       );
       return;
     }
@@ -59,12 +59,12 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_UPDATED)
   async handleMonitorUpdated(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) {
+    if (!claimed) {
       this.logger.debug(
-        `Monitor updated event already processed: ${message.idempotencyKey}`,
+        `Monitor updated event already claimed/processed: ${message.idempotencyKey}`,
       );
       return;
     }
@@ -82,10 +82,10 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_DELETED)
   async handleMonitorDeleted(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) return;
+    if (!claimed) return;
 
     const payload: MonitorDeletedPayload = JSON.parse(message.payload);
     this.logger.log(
@@ -97,12 +97,12 @@ export class MonitorConsumer {
 
   @EventHandler(EventType.MONITOR_CHECK_REQUESTED)
   async handleMonitorCheckRequested(message: EventMessage): Promise<void> {
-    const done = await this.outboxRepository.isProcessed(
+    const claimed = await this.outboxRepository.tryClaimProcessing(
       message.idempotencyKey,
     );
-    if (done) {
+    if (!claimed) {
       this.logger.debug(
-        `Monitor check requested event already processed: ${message.idempotencyKey}`,
+        `Monitor check requested event already claimed/processed: ${message.idempotencyKey}`,
       );
       return;
     }

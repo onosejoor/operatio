@@ -39,6 +39,7 @@ describe('OutboxWriter', () => {
         aggregateType: AggregateType.Monitor,
         aggregateId: 'monitor-123',
         eventType: 'monitor.created',
+        idempotencyKey: 'test-key-1',
         payload: { monitorId: 'monitor-123', organizationId: 'org-123' },
       };
 
@@ -51,6 +52,8 @@ describe('OutboxWriter', () => {
           aggregateType: AggregateType.Monitor,
           aggregateId: 'monitor-123',
           eventType: 'monitor.created',
+          idempotencyKey: 'test-key-1',
+          status: 'PENDING',
           payload: JSON.stringify(event.payload),
         },
       });
@@ -61,6 +64,7 @@ describe('OutboxWriter', () => {
         aggregateType: AggregateType.Monitor,
         aggregateId: 'monitor-123',
         eventType: 'monitor.created',
+        idempotencyKey: 'test-key-2',
         payload: {
           monitorId: 'monitor-123',
           organizationId: 'org-123',
@@ -86,6 +90,7 @@ describe('OutboxWriter', () => {
         aggregateType: AggregateType.Monitor,
         aggregateId: 'monitor-123',
         eventType: 'monitor.created',
+        idempotencyKey: 'test-key-3',
         payload: { monitorId: 'monitor-123', organizationId: 'org-123' },
       };
 
@@ -102,6 +107,8 @@ describe('OutboxWriter', () => {
           aggregateType: AggregateType.Monitor,
           aggregateId: 'monitor-123',
           eventType: 'monitor.created',
+          idempotencyKey: 'test-key-3',
+          status: 'PENDING',
           payload: JSON.stringify(event.payload),
         },
       });
@@ -115,6 +122,7 @@ describe('OutboxWriter', () => {
         aggregateType: AggregateType.Incident,
         aggregateId: 'incident-123',
         eventType: 'incident.created',
+        idempotencyKey: 'test-key-4',
         payload: { incidentId: 'incident-123', severity: 'high' },
       };
 

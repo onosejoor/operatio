@@ -1,6 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { MonitorStatus } from '@prisma/client';
 import { MonitorsService } from '../monitors.service';
+import { PrismaService } from '../../database/database.service';
+import { OutboxWriter } from '../../infrastructure/outbox/writers/outbox.writer';
+import { EventType } from '../../shared/events/event-types';
+import { AggregateType } from '@prisma/client';
 
 describe('MonitorsService', () => {
   const transaction = {
@@ -13,11 +17,14 @@ describe('MonitorsService', () => {
       findFirst: jest.fn(),
       updateMany: jest.fn(),
     },
+    monitorCheck: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
-  const monitorCheckQueue = { enqueue: jest.fn() };
-  const outboxWriter = { writeTx: jest.fn() };
-  const service = new MonitorsService(prisma as never, monitorCheckQueue as never, outboxWriter as never);
+  const outboxWriter = { write: jest.fn(), writeTx: jest.fn() };
+  const service = new MonitorsService(prisma as never, outboxWriter as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -27,7 +34,7 @@ describe('MonitorsService', () => {
     );
   });
 
-  it('creates a monitor and queues its initial check', async () => {
+  it('creates a monitor and writes check requested event', async () => {
     const input = {
       name: 'API',
       url: 'https://api.example.com/health',
@@ -43,7 +50,15 @@ describe('MonitorsService', () => {
       data: { organizationId: 'organization-id', ...input },
       select: { id: true },
     });
-    expect(monitorCheckQueue.enqueue).toHaveBeenCalledWith('monitor-id');
+    expect(outboxWriter.writeTx).toHaveBeenCalledWith(
+      transaction,
+      expect.objectContaining({
+        eventType: EventType.MONITOR_CHECK_REQUESTED,
+        aggregateType: AggregateType.Monitor,
+        aggregateId: 'monitor-id',
+        payload: { monitorId: 'monitor-id' },
+      }),
+    );
   });
 
   it('lists only monitors for the requested organization', async () => {
@@ -92,6 +107,7 @@ describe('MonitorsService', () => {
   });
 
   it('queues a fresh check when a monitor URL changes', async () => {
+    prisma.monitor.findFirst.mockResolvedValue({ interval: 60 });
     prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', {
@@ -105,7 +121,56 @@ describe('MonitorsService', () => {
         status: MonitorStatus.PENDING,
       },
     });
-    expect(monitorCheckQueue.enqueue).toHaveBeenCalledWith('monitor-id');
+    expect(outboxWriter.write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: EventType.MONITOR_CHECK_REQUESTED,
+        aggregateType: AggregateType.Monitor,
+        aggregateId: 'monitor-id',
+        payload: { monitorId: 'monitor-id' },
+      }),
+    );
+  });
+
+  it('queues a fresh check when monitor is activated', async () => {
+    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.update('organization-id', 'monitor-id', {
+      isActive: true,
+    });
+
+    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+      where: { id: 'monitor-id', organizationId: 'organization-id' },
+      data: {
+        isActive: true,
+        status: MonitorStatus.PENDING,
+      },
+    });
+    expect(outboxWriter.write).toHaveBeenCalled();
+  });
+
+  it('updates nextCheckAt when interval changes', async () => {
+    prisma.monitor.findFirst.mockResolvedValue({ interval: 60 });
+    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.update('organization-id', 'monitor-id', {
+      interval: 120,
+    });
+
+    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+      where: { id: 'monitor-id', organizationId: 'organization-id' },
+      data: expect.objectContaining({
+        interval: 120,
+        nextCheckAt: expect.any(Date),
+      }),
+    });
+  });
+
+  it('does not queue check when only name changes', async () => {
+    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.update('organization-id', 'monitor-id', { name: 'Renamed API' });
+
+    expect(outboxWriter.write).not.toHaveBeenCalled();
   });
 
   it('reports a missing monitor when no scoped update occurs', async () => {
@@ -126,5 +191,80 @@ describe('MonitorsService', () => {
       where: { id: 'monitor-id', organizationId: 'organization-id' },
       data: { isActive: false },
     });
+  });
+
+  it('returns paginated check history for a monitor', async () => {
+    const checks = [
+      { id: 'check-1', status: MonitorStatus.UP, statusCode: 200 },
+      { id: 'check-2', status: MonitorStatus.DOWN, statusCode: 503 },
+    ];
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id' });
+    prisma.monitorCheck.findMany.mockResolvedValue(checks);
+    prisma.monitorCheck.count.mockResolvedValue(2);
+
+    const result = await service.getChecks('organization-id', 'monitor-id', 1, 50);
+
+    expect(result).toEqual({
+      data: checks,
+      meta: {
+        total: 2,
+        page: 1,
+        limit: 50,
+        totalPages: 1,
+      },
+    });
+  });
+
+  it('throws NotFoundException when getting checks for non-existent monitor', async () => {
+    prisma.monitor.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.getChecks('organization-id', 'monitor-id'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns stats for a monitor with checks', async () => {
+    const checks = [
+      { status: MonitorStatus.UP, responseTimeMs: 100 },
+      { status: MonitorStatus.UP, responseTimeMs: 150 },
+      { status: MonitorStatus.DOWN, responseTimeMs: 200 },
+    ];
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id', status: MonitorStatus.UP });
+    prisma.monitorCheck.findMany.mockResolvedValue(checks);
+
+    const result = await service.getStats('organization-id', 'monitor-id');
+
+    expect(result).toEqual({
+      checkSuccessRate: 66.67,
+      averageResponseTime: 150,
+      totalChecks: 3,
+      successfulChecks: 2,
+      failedChecks: 1,
+      latestStatus: MonitorStatus.UP,
+    });
+  });
+
+  it('returns zero stats for a monitor with no checks', async () => {
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id', status: MonitorStatus.PENDING });
+    prisma.monitorCheck.findMany.mockResolvedValue([]);
+
+    const result = await service.getStats('organization-id', 'monitor-id');
+
+    expect(result).toEqual({
+      checkSuccessRate: 0,
+      averageResponseTime: 0,
+      totalChecks: 0,
+      successfulChecks: 0,
+      failedChecks: 0,
+      latestStatus: MonitorStatus.PENDING,
+    });
+  });
+
+  it('throws NotFoundException when getting stats for non-existent monitor', async () => {
+    prisma.monitor.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.getStats('organization-id', 'monitor-id'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

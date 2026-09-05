@@ -34,10 +34,15 @@ export class MonitorsService {
   ): Promise<void> {
     await this.prisma.$transaction(
       async (tx) => {
+        const interval = createMonitorDto.interval || 60;
+        const now = new Date();
+        const nextCheckAt = new Date(now.getTime() + interval * 1000);
+
         const monitor = await tx.monitor.create({
           data: {
             organizationId,
             ...createMonitorDto,
+            nextCheckAt,
           },
           select: { id: true },
         });
@@ -87,60 +92,53 @@ export class MonitorsService {
     const shouldCheck =
       updateMonitorDto.isActive === true || updateMonitorDto.url !== undefined;
 
-    const updateData: Prisma.MonitorUpdateInput = { ...updateMonitorDto };
+    await this.prisma.$transaction(
+      async (tx) => {
+        const updateData: Prisma.MonitorUpdateInput = { ...updateMonitorDto };
 
-    if (updateMonitorDto.interval !== undefined) {
-      const monitor = await this.prisma.monitor.findFirst({
-        where: { id: monitorId, organizationId },
-        select: { interval: true },
-      });
+        if (updateMonitorDto.interval !== undefined) {
+          const monitor = await tx.monitor.findFirst({
+            where: { id: monitorId, organizationId },
+            select: { interval: true },
+          });
 
-      if (monitor) {
-        updateData.nextCheckAt = new Date(
-          Date.now() + updateMonitorDto.interval * 1000,
-        );
-      }
-    }
+          if (monitor) {
+            updateData.nextCheckAt = new Date(
+              Date.now() + updateMonitorDto.interval * 1000,
+            );
+          }
+        }
 
-    if (
-      updateMonitorDto.url !== undefined ||
-      updateMonitorDto.isActive === true
-    ) {
-      updateData.status = MonitorStatus.PENDING;
-    }
+        if (
+          updateMonitorDto.url !== undefined ||
+          updateMonitorDto.isActive === true
+        ) {
+          updateData.status = MonitorStatus.PENDING;
+        }
 
-    const result = await this.prisma.monitor.updateMany({
-      where: { id: monitorId, organizationId },
-      data: updateData,
-    });
+        const result = await tx.monitor.updateMany({
+          where: { id: monitorId, organizationId },
+          data: updateData,
+        });
 
-    if (result.count === 0) {
-      throw new NotFoundException('Monitor not found');
-    }
+        if (result.count === 0) {
+          throw new NotFoundException('Monitor not found');
+        }
 
-    // await this.outboxWriter.write({
-    //   aggregateType: AggregateType.Monitor,
-    //   idempotencyKey: `monitor-updated-${monitorId}-${Date.now()}`,
-    //   aggregateId: monitorId,
-    //   eventType: EventType.MONITOR_UPDATED,
-    //   payload: {
-    //     monitorId,
-    //     organizationId,
-    //     changes: updateMonitorDto,
-    //   },
-    // });
-
-    if (shouldCheck) {
-      await this.outboxWriter.write({
-        aggregateType: AggregateType.Monitor,
-        idempotencyKey: `monitor-check-requested-${monitorId}-${Date.now()}`,
-        aggregateId: monitorId,
-        eventType: EventType.MONITOR_CHECK_REQUESTED,
-        payload: {
-          monitorId,
-        },
-      });
-    }
+        if (shouldCheck) {
+          await this.outboxWriter.writeTx(tx, {
+            aggregateType: AggregateType.Monitor,
+            idempotencyKey: `monitor-check-requested-${monitorId}-${Date.now()}`,
+            aggregateId: monitorId,
+            eventType: EventType.MONITOR_CHECK_REQUESTED,
+            payload: {
+              monitorId,
+            },
+          });
+        }
+      },
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
   }
 
   async disable(organizationId: string, monitorId: string): Promise<void> {
