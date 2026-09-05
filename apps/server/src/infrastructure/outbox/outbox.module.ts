@@ -9,7 +9,7 @@ import { EventHandlerRegistrar } from '../../shared/events/event-handler-registr
 import { DiscoveryModule } from '@nestjs/core';
 
 @Module({
-  imports: [PrismaModule, ScheduleModule.forRoot(), DiscoveryModule],
+  imports: [PrismaModule, ScheduleModule, DiscoveryModule],
   providers: [
     OutboxWriter,
     OutboxRepository,

@@ -6,7 +6,7 @@ import type { EventMessage } from '../../infrastructure/outbox/types/outbox.type
 
 describe('MonitorConsumer', () => {
   const outboxRepository = {
-    isProcessed: jest.fn(),
+    tryClaimProcessing: jest.fn(),
     markProcessedByKey: jest.fn(),
   };
   const monitorCheckService = {
@@ -34,11 +34,11 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(false);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(true);
 
       await consumer.handleMonitorCreated(message);
 
-      expect(outboxRepository.isProcessed).toHaveBeenCalledWith('monitor-created-1');
+      expect(outboxRepository.tryClaimProcessing).toHaveBeenCalledWith('monitor-created-1');
       expect(outboxRepository.markProcessedByKey).toHaveBeenCalledWith('monitor-created-1');
     });
 
@@ -54,7 +54,7 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(true);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(false);
 
       await consumer.handleMonitorCreated(message);
 
@@ -76,11 +76,11 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(false);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(true);
 
       await consumer.handleMonitorUpdated(message);
 
-      expect(outboxRepository.isProcessed).toHaveBeenCalledWith('monitor-updated-1');
+      expect(outboxRepository.tryClaimProcessing).toHaveBeenCalledWith('monitor-updated-1');
       expect(outboxRepository.markProcessedByKey).toHaveBeenCalledWith('monitor-updated-1');
     });
 
@@ -97,7 +97,7 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(true);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(false);
 
       await consumer.handleMonitorUpdated(message);
 
@@ -118,11 +118,11 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(false);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(true);
 
       await consumer.handleMonitorDeleted(message);
 
-      expect(outboxRepository.isProcessed).toHaveBeenCalledWith('monitor-deleted-1');
+      expect(outboxRepository.tryClaimProcessing).toHaveBeenCalledWith('monitor-deleted-1');
       expect(outboxRepository.markProcessedByKey).toHaveBeenCalledWith('monitor-deleted-1');
     });
 
@@ -138,7 +138,7 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(true);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(false);
 
       await consumer.handleMonitorDeleted(message);
 
@@ -158,12 +158,12 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(false);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(true);
       monitorCheckService.execute.mockResolvedValue(undefined);
 
       await consumer.handleMonitorCheckRequested(message);
 
-      expect(outboxRepository.isProcessed).toHaveBeenCalledWith('monitor-check-requested-1');
+      expect(outboxRepository.tryClaimProcessing).toHaveBeenCalledWith('monitor-check-requested-1');
       expect(monitorCheckService.execute).toHaveBeenCalledWith('monitor-1');
       expect(outboxRepository.markProcessedByKey).toHaveBeenCalledWith('monitor-check-requested-1');
     });
@@ -179,7 +179,7 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(true);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(false);
 
       await consumer.handleMonitorCheckRequested(message);
 
@@ -198,7 +198,7 @@ describe('MonitorConsumer', () => {
         }),
       };
 
-      outboxRepository.isProcessed.mockResolvedValue(false);
+      outboxRepository.tryClaimProcessing.mockResolvedValue(true);
       monitorCheckService.execute.mockRejectedValue(new Error('Check failed'));
 
       await expect(consumer.handleMonitorCheckRequested(message)).rejects.toThrow('Check failed');

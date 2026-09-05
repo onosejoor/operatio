@@ -25,7 +25,7 @@ export class TokenService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async createTokens(userId: string, email: string): Promise<TokenPair> {
+  async createTokens(userId: string): Promise<TokenPair> {
     const accessExpiresIn = this.parseTokenLifetime(
       this.appConfig.get('jwt.accessTokenExpiresIn'),
     );
@@ -76,7 +76,13 @@ export class TokenService {
     const payload = await this.verifyRefreshToken(refreshToken);
     const token = await this.prisma.token.findUnique({
       where: { id: payload.tokenId },
-      include: { user: true },
+      select: {
+        id: true,
+        userId: true,
+        tokenHash: true,
+        expiresAt: true,
+        revokedAt: true,
+      },
     });
 
     if (
@@ -93,7 +99,7 @@ export class TokenService {
       data: { revokedAt: new Date() },
     });
 
-    return this.createTokens(token.user.id, token.user.email);
+    return this.createTokens(token.userId);
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {

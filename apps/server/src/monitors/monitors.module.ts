@@ -11,7 +11,7 @@ import { MonitorConsumer } from './consumers/monitor.consumer';
 import { MonitorSchedulerService } from './scheduler/monitor-scheduler.service';
 
 @Module({
-  imports: [AuthModule, OrganizationsModule, OutboxModule, ScheduleModule.forRoot()],
+  imports: [AuthModule, OrganizationsModule, OutboxModule, ScheduleModule],
   controllers: [MonitorsController],
   providers: [
     HttpClientService,

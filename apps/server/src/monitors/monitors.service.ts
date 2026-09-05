@@ -157,6 +157,8 @@ export class MonitorsService {
     monitorId: string,
     page: number = 1,
     limit: number = 50,
+    fromDate?: string,
+    toDate?: string,
   ) {
     const monitor = await this.prisma.monitor.findFirst({
       where: { id: monitorId, organizationId },
@@ -168,20 +170,42 @@ export class MonitorsService {
 
     const skip = (page - 1) * limit;
 
+    // Build date filter
+    const dateFilter: Prisma.DateTimeFilter = {};
+    if (fromDate) {
+      dateFilter.gte = new Date(fromDate);
+    }
+    if (toDate) {
+      dateFilter.lte = new Date(toDate);
+    }
+
+    const whereClause: Prisma.MonitorCheckWhereInput = { monitorId };
+    if (Object.keys(dateFilter).length > 0) {
+      whereClause.checkedAt = dateFilter;
+    }
+
     const [checks, total] = await Promise.all([
       this.prisma.monitorCheck.findMany({
-        where: { monitorId },
+        where: whereClause,
         orderBy: { checkedAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          statusCode: true,
+          responseTimeMs: true,
+          checkedAt: true,
+          error: true,
+        },
         skip,
         take: limit,
       }),
       this.prisma.monitorCheck.count({
-        where: { monitorId },
+        where: whereClause,
       }),
     ]);
 
     return {
-      data: checks,
+      checks,
       meta: {
         total,
         page,

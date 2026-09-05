@@ -167,7 +167,7 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.tokenService.createTokens(user.id, user.email);
+    const tokens = await this.tokenService.createTokens(user.id);
 
     return { tokens };
   }
@@ -183,7 +183,7 @@ export class AuthService {
     }
 
     this.logger.log(`User logged in successfully: ${user.email}`);
-    const tokens = await this.tokenService.createTokens(user.id, user.email);
+    const tokens = await this.tokenService.createTokens(user.id);
     const memberships = await this.prisma.membership.findMany({
       where: { userId: user.id },
       include: { organization: true },

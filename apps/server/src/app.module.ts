@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -19,6 +20,7 @@ import { IncidentsModule } from './incidents/incidents.module';
   imports: [
     ConfigModule,
     ThrottlerModule.forRoot([RATE_LIMITS.default]),
+    ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
     QueuesModule,

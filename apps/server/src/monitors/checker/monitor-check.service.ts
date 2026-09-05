@@ -86,9 +86,9 @@ export class MonitorCheckService {
     newStatus: MonitorStatus,
     checkedAt: Date,
   ): Promise<void> {
-    if (previousStatus === MonitorStatus.PENDING) {
-      return;
-    }
+    // if (previousStatus === MonitorStatus.PENDING) {
+    //   return;
+    // }
 
     if (previousStatus !== newStatus) {
       await this.outboxWriter.writeTx(tx, {
@@ -125,11 +125,16 @@ export class MonitorCheckService {
           ? MonitorStatus.UP
           : MonitorStatus.DOWN;
 
+      // Set error message for non-successful HTTP status codes
+      const error = status === MonitorStatus.DOWN 
+        ? `HTTP ${response.status}` 
+        : null;
+
       return {
         status,
         statusCode: response.status,
         responseTimeMs,
-        error: null,
+        error,
       };
     } catch (error) {
       const responseTimeMs = Math.round(performance.now() - startedAt);

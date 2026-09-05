@@ -8,7 +8,11 @@ import { AggregateType } from '@prisma/client';
 
 describe('MonitorsService', () => {
   const transaction = {
-    monitor: { create: jest.fn() },
+    monitor: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
   const prisma = {
     monitor: {
@@ -47,7 +51,14 @@ describe('MonitorsService', () => {
       service.create('organization-id', input),
     ).resolves.toBeUndefined();
     expect(transaction.monitor.create).toHaveBeenCalledWith({
-      data: { organizationId: 'organization-id', ...input },
+      data: expect.objectContaining({
+        organizationId: 'organization-id',
+        name: 'API',
+        url: 'https://api.example.com/health',
+        interval: 60,
+        timeout: 10_000,
+        nextCheckAt: expect.any(Date),
+      }),
       select: { id: true },
     });
     expect(outboxWriter.writeTx).toHaveBeenCalledWith(
@@ -95,33 +106,34 @@ describe('MonitorsService', () => {
 
   it('updates the monitor in one organization-scoped write', async () => {
     const input = { name: 'Renamed API', interval: 120 };
-    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(
       service.update('organization-id', 'monitor-id', input),
     ).resolves.toBeUndefined();
-    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+    expect(transaction.monitor.updateMany).toHaveBeenCalledWith({
       where: { id: 'monitor-id', organizationId: 'organization-id' },
       data: input,
     });
   });
 
   it('queues a fresh check when a monitor URL changes', async () => {
-    prisma.monitor.findFirst.mockResolvedValue({ interval: 60 });
-    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+    transaction.monitor.findFirst.mockResolvedValue({ interval: 60 });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', {
       url: 'https://api.example.com/v2/health',
     });
 
-    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+    expect(transaction.monitor.updateMany).toHaveBeenCalledWith({
       where: { id: 'monitor-id', organizationId: 'organization-id' },
       data: {
         url: 'https://api.example.com/v2/health',
         status: MonitorStatus.PENDING,
       },
     });
-    expect(outboxWriter.write).toHaveBeenCalledWith(
+    expect(outboxWriter.writeTx).toHaveBeenCalledWith(
+      transaction,
       expect.objectContaining({
         eventType: EventType.MONITOR_CHECK_REQUESTED,
         aggregateType: AggregateType.Monitor,
@@ -132,31 +144,31 @@ describe('MonitorsService', () => {
   });
 
   it('queues a fresh check when monitor is activated', async () => {
-    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', {
       isActive: true,
     });
 
-    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+    expect(transaction.monitor.updateMany).toHaveBeenCalledWith({
       where: { id: 'monitor-id', organizationId: 'organization-id' },
       data: {
         isActive: true,
         status: MonitorStatus.PENDING,
       },
     });
-    expect(outboxWriter.write).toHaveBeenCalled();
+    expect(outboxWriter.writeTx).toHaveBeenCalled();
   });
 
   it('updates nextCheckAt when interval changes', async () => {
-    prisma.monitor.findFirst.mockResolvedValue({ interval: 60 });
-    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+    transaction.monitor.findFirst.mockResolvedValue({ interval: 60 });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', {
       interval: 120,
     });
 
-    expect(prisma.monitor.updateMany).toHaveBeenCalledWith({
+    expect(transaction.monitor.updateMany).toHaveBeenCalledWith({
       where: { id: 'monitor-id', organizationId: 'organization-id' },
       data: expect.objectContaining({
         interval: 120,
@@ -166,15 +178,15 @@ describe('MonitorsService', () => {
   });
 
   it('does not queue check when only name changes', async () => {
-    prisma.monitor.updateMany.mockResolvedValue({ count: 1 });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', { name: 'Renamed API' });
 
-    expect(outboxWriter.write).not.toHaveBeenCalled();
+    expect(outboxWriter.writeTx).not.toHaveBeenCalled();
   });
 
   it('reports a missing monitor when no scoped update occurs', async () => {
-    prisma.monitor.updateMany.mockResolvedValue({ count: 0 });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 0 });
 
     await expect(
       service.update('organization-id', 'monitor-id', { name: 'Renamed API' }),
@@ -215,12 +227,72 @@ describe('MonitorsService', () => {
     });
   });
 
+  it('filters check history by date range', async () => {
+    const checks = [
+      { id: 'check-1', status: MonitorStatus.UP, statusCode: 200 },
+    ];
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id' });
+    prisma.monitorCheck.findMany.mockResolvedValue(checks);
+    prisma.monitorCheck.count.mockResolvedValue(1);
+
+    await service.getChecks(
+      'organization-id',
+      'monitor-id',
+      1,
+      50,
+      '2024-01-01T00:00:00Z',
+      '2024-12-31T23:59:59Z',
+    );
+
+    expect(prisma.monitorCheck.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          monitorId: 'monitor-id',
+          checkedAt: {
+            gte: new Date('2024-01-01T00:00:00Z'),
+            lte: new Date('2024-12-31T23:59:59Z'),
+          },
+        },
+      }),
+    );
+  });
+
   it('throws NotFoundException when getting checks for non-existent monitor', async () => {
     prisma.monitor.findFirst.mockResolvedValue(null);
 
     await expect(
-      service.getChecks('organization-id', 'monitor-id'),
+      service.getChecks('organization-id', 'monitor-id', 1, 50),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('filters check history by date range', async () => {
+    const checks = [
+      { id: 'check-1', status: MonitorStatus.UP, statusCode: 200 },
+    ];
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id' });
+    prisma.monitorCheck.findMany.mockResolvedValue(checks);
+    prisma.monitorCheck.count.mockResolvedValue(1);
+
+    await service.getChecks(
+      'organization-id',
+      'monitor-id',
+      1,
+      50,
+      '2024-01-01T00:00:00Z',
+      '2024-12-31T23:59:59Z',
+    );
+
+    expect(prisma.monitorCheck.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          monitorId: 'monitor-id',
+          checkedAt: {
+            gte: new Date('2024-01-01T00:00:00Z'),
+            lte: new Date('2024-12-31T23:59:59Z'),
+          },
+        },
+      }),
+    );
   });
 
   it('returns stats for a monitor with checks', async () => {

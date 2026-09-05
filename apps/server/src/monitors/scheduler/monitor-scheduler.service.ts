@@ -17,6 +17,7 @@ export class MonitorSchedulerService {
 
   @Cron(CronExpression.EVERY_30_SECONDS)
   async scheduleMonitorChecks(): Promise<void> {
+    this.logger.debug('Running monitor scheduler to find due monitors');
     try {
       const now = new Date();
 
@@ -36,6 +37,9 @@ export class MonitorSchedulerService {
       });
 
       if (dueMonitors.length === 0) {
+        this.logger.debug(
+          `No monitors due for checking at this time ${now.toISOString()}`,
+        );
         return;
       }
 

@@ -214,7 +214,7 @@ describe('MonitorCheckService', () => {
       data: expect.objectContaining({
         status: MonitorStatus.DOWN,
         statusCode: null,
-        error: 'ECONNABORTED',
+        error: 'Request timeout',
       }),
     });
   });

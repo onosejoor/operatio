@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
+import { QueryDto } from '../common/dto/query.dto';
 import { OrganizationMembershipGuard } from '../common/guards/organization-membership.guard';
 import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
 import { CurrentOrganizationId } from '../organizations/decorators/current-organization-id.decorator';
@@ -123,18 +124,20 @@ export class MonitorsController {
   @Get(':monitorId/checks')
   @ApiOperation({ summary: 'Get monitor check history' })
   @ApiResponse({ status: 200, type: ApiResponseDto })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
   async getChecks(
     @CurrentOrganizationId() organizationId: string,
     @Param('monitorId') monitorId: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query() query: QueryDto,
   ) {
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 10) : 50;
     return ApiResponseDto.success(
-      await this.monitorsService.getChecks(organizationId, monitorId, pageNum, limitNum),
+      await this.monitorsService.getChecks(
+        organizationId,
+        monitorId,
+        query.page,
+        query.limit,
+        query.fromDate,
+        query.toDate,
+      ),
     );
   }
 
