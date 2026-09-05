@@ -34,29 +34,13 @@ export class MonitorsService {
   ): Promise<void> {
     await this.prisma.$transaction(
       async (tx) => {
-        const nextCheckAt = new Date(
-          Date.now() + createMonitorDto.interval * 1000,
-        );
-
         const monitor = await tx.monitor.create({
           data: {
             organizationId,
             ...createMonitorDto,
-            nextCheckAt,
           },
           select: { id: true },
         });
-
-        // await this.outboxWriter.writeTx(tx, {
-        //   aggregateType: AggregateType.Monitor,
-        //   idempotencyKey: `monitor-created-${monitor.id}`,
-        //   aggregateId: monitor.id,
-        //   eventType: EventType.MONITOR_CREATED,
-        //   payload: {
-        //     monitorId: monitor.id,
-        //     organizationId,
-        //   },
-        // });
 
         await this.outboxWriter.writeTx(tx, {
           aggregateType: AggregateType.Monitor,

@@ -38,6 +38,7 @@ export class MonitorCheckService {
 
     const result = await this.requestUrl(monitor.url, monitor.timeout);
     const checkedAt = new Date();
+    const nextCheckAt = new Date(checkedAt.getTime() + monitor.interval * 1000);
 
     await this.prisma.$transaction(
       async (transaction) => {
@@ -65,6 +66,7 @@ export class MonitorCheckService {
             lastCheckedAt: checkedAt,
             lastStatusCode: result.statusCode,
             lastResponseTimeMs: result.responseTimeMs,
+            nextCheckAt,
           },
         });
       },

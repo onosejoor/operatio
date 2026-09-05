@@ -71,9 +71,14 @@ export class MonitorSchedulerService {
         return false;
       }
 
-      if (
-        currentMonitor.nextCheckAt?.getTime() !== monitor.nextCheckAt?.getTime()
-      ) {
+      if (monitor.nextCheckAt !== null) {
+        if (
+          currentMonitor.nextCheckAt === null ||
+          currentMonitor.nextCheckAt.getTime() !== monitor.nextCheckAt.getTime()
+        ) {
+          return false;
+        }
+      } else if (currentMonitor.nextCheckAt !== null) {
         return false;
       }
 
