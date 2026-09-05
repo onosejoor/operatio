@@ -61,7 +61,8 @@ export class IncidentConsumer {
     const checkedAt = new Date(payload.checkedAt);
 
     if (
-      payload.previousStatus === MonitorStatus.UP &&
+      (payload.previousStatus === MonitorStatus.UP ||
+        payload.previousStatus === MonitorStatus.PENDING) &&
       payload.newStatus === MonitorStatus.DOWN
     ) {
       await this.handleMonitorDown(
@@ -70,7 +71,8 @@ export class IncidentConsumer {
         checkedAt,
       );
     } else if (
-      payload.previousStatus === MonitorStatus.DOWN &&
+      (payload.previousStatus === MonitorStatus.DOWN ||
+        payload.previousStatus === MonitorStatus.PENDING) &&
       payload.newStatus === MonitorStatus.UP
     ) {
       await this.handleMonitorUp(payload.monitorId, checkedAt);
@@ -84,33 +86,16 @@ export class IncidentConsumer {
     organizationId: string,
     checkedAt: Date,
   ): Promise<void> {
-    await this.prisma.$transaction(
-      async (tx: PrismaTransactionType) => {
-        const incident = await tx.incident.create({
-          data: {
-            monitorId,
-            organizationId,
-            startedAt: checkedAt,
-          },
-        });
-
-        await this.outboxWriter.writeTx(tx, {
-          aggregateType: AggregateType.Incident,
-          idempotencyKey: `incident-created-${incident.id}`,
-          aggregateId: incident.id,
-          eventType: EventType.INCIDENT_CREATED,
-          payload: {
-            incidentId: incident.id,
-            monitorId,
-            organizationId,
-            startedAt: checkedAt.toISOString(),
-          },
-        });
-
-        this.logger.log(`Incident created for monitor ${monitorId}`);
+    await this.prisma.incident.create({
+      data: {
+        monitorId,
+        organizationId,
+        startedAt: checkedAt,
+        resolvedAt: null,
       },
-      { timeout: PRISMA_TRANSACTION_TIMEOUT },
-    );
+    });
+
+    this.logger.log(`Incident created for monitor ${monitorId}`);
   }
 
   private async handleMonitorUp(
@@ -118,7 +103,7 @@ export class IncidentConsumer {
     checkedAt: Date,
   ): Promise<void> {
     await this.prisma.$transaction(
-      async (tx: PrismaTransactionType) => {
+      async (tx) => {
         const activeIncident = await tx.incident.findFirst({
           where: {
             monitorId,
@@ -127,7 +112,16 @@ export class IncidentConsumer {
           orderBy: {
             startedAt: 'desc',
           },
+          select: {
+            id: true,
+            monitorId: true,
+            organizationId: true,
+          },
         });
+
+        this.logger.log(
+          `Active incident for monitor ${monitorId}: ${activeIncident?.id}`,
+        );
 
         if (activeIncident) {
           await tx.incident.update({
@@ -136,6 +130,10 @@ export class IncidentConsumer {
               resolvedAt: checkedAt,
             },
           });
+
+          this.logger.log(
+            `Found active incident for monitor ${monitorId}: ${activeIncident.id}`,
+          );
 
           await this.outboxWriter.writeTx(tx, {
             aggregateType: AggregateType.Incident,

@@ -129,9 +129,17 @@ describe('MonitorsController', () => {
 
       mockMonitorsService.update.mockResolvedValue(undefined);
 
-      const result = await controller.update('org-1', 'monitor-1', updateMonitorDto);
+      const result = await controller.update(
+        'org-1',
+        'monitor-1',
+        updateMonitorDto,
+      );
 
-      expect(service.update).toHaveBeenCalledWith('org-1', 'monitor-1', updateMonitorDto);
+      expect(service.update).toHaveBeenCalledWith(
+        'org-1',
+        'monitor-1',
+        updateMonitorDto,
+      );
       expect(result).toEqual({
         success: true,
         data: undefined,
@@ -184,9 +192,17 @@ describe('MonitorsController', () => {
         },
       });
 
-      const result = await controller.getChecks('org-1', 'monitor-1', '1', '50');
+      const result = await controller.getChecks('org-1', 'monitor-1', {
+        limit: 50,
+        page: 1,
+      });
 
-      expect(service.getChecks).toHaveBeenCalledWith('org-1', 'monitor-1', 1, 50);
+      expect(service.getChecks).toHaveBeenCalledWith(
+        'org-1',
+        'monitor-1',
+        1,
+        50,
+      );
       expect(result).toEqual({
         success: true,
         data: {
@@ -212,9 +228,14 @@ describe('MonitorsController', () => {
         },
       });
 
-      await controller.getChecks('org-1', 'monitor-1');
+      await controller.getChecks('org-1', 'monitor-1', {});
 
-      expect(service.getChecks).toHaveBeenCalledWith('org-1', 'monitor-1', 1, 50);
+      expect(service.getChecks).toHaveBeenCalledWith(
+        'org-1',
+        'monitor-1',
+        1,
+        50,
+      );
     });
   });
 
