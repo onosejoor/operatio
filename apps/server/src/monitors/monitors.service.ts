@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { MonitorStatus, AggregateType, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/database.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
@@ -33,6 +33,18 @@ export class MonitorsService {
     organizationId: string,
     createMonitorDto: CreateMonitorDto,
   ): Promise<string> {
+    const existingMonitor = await this.prisma.monitor.findFirst({
+      where: {
+        organizationId,
+        url: createMonitorDto.url,
+      },
+      select: { id: true },
+    });
+
+    if (existingMonitor) {
+      throw new ConflictException('A monitor with this URL already exists in your organization');
+    }
+
     return await this.prisma.$transaction(
       async (tx) => {
         const interval = createMonitorDto.interval || 60;
@@ -66,7 +78,7 @@ export class MonitorsService {
 
   async findAll(organizationId: string) {
     return this.prisma.monitor.findMany({
-      where: { organizationId },
+      where: { organizationId, isActive: true },
       select: monitorSelect,
       orderBy: { createdAt: 'asc' },
     });
@@ -101,6 +113,22 @@ export class MonitorsService {
       updateData.nextCheckAt = new Date(
         Date.now() + (updateMonitorDto.interval || monitor.interval) * 1000,
       );
+    }
+
+    // Check for duplicate URL if URL is being changed
+    if (updateMonitorDto.url && updateMonitorDto.url !== monitor?.url) {
+      const existingMonitor = await this.prisma.monitor.findFirst({
+        where: {
+          organizationId,
+          url: updateMonitorDto.url,
+          id: { not: monitorId }, // Exclude current monitor
+        },
+        select: { id: true },
+      });
+
+      if (existingMonitor) {
+        throw new ConflictException('A monitor with this URL already exists in your organization');
+      }
     }
 
     const shouldCheck =

@@ -36,6 +36,11 @@ export const MONITOR_CHECK_JOB = 'check-monitor';
 
 export const PRISMA_TRANSACTION_TIMEOUT = 30000;
 
+export const PERFORMANCE_THRESHOLDS = {
+  SLOW_RESPONSE_TIME_MS: 3000, // 3 seconds
+  VERY_SLOW_RESPONSE_TIME_MS: 5000, // 5 seconds
+} as const;
+
 export type PrismaTransactionType = Omit<
   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'

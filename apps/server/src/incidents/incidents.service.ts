@@ -19,9 +19,9 @@ export class IncidentsService {
     page: number = 1,
     limit: number = 50,
   ) {
-    // Verify monitor belongs to organization
+    // Verify monitor belongs to organization and is active
     const monitor = await this.prisma.monitor.findFirst({
-      where: { id: monitorId, organizationId },
+      where: { id: monitorId, organizationId, isActive: true },
     });
 
     if (!monitor) {

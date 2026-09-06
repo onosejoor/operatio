@@ -17,6 +17,7 @@ import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
 import { CurrentOrganizationId } from '../organizations/decorators/current-organization-id.decorator';
 import { CreateStatusPageDto } from './dto/create-status-page.dto';
 import { UpdateStatusPageDto } from './dto/update-status-page.dto';
+import { AddMonitorToStatusPageDto } from './dto/add-monitor.dto';
 import { StatusPagesService } from './status-pages.service';
 
 @ApiTags('status-pages')
@@ -57,11 +58,11 @@ export class StatusPagesController {
     @CurrentOrganizationId() organizationId: string,
     @Body() createStatusPageDto: CreateStatusPageDto,
   ) {
-    const statusPage = await this.statusPagesService.create(
+    const result = await this.statusPagesService.create(
       organizationId,
       createStatusPageDto,
     );
-    return ApiResponseDto.success(statusPage, 'Status page created successfully');
+    return ApiResponseDto.success(result.id, 'Status page created successfully');
   }
 
   @Get()
@@ -115,12 +116,12 @@ export class StatusPagesController {
     @Param('statusPageId') statusPageId: string,
     @Body() updateStatusPageDto: UpdateStatusPageDto,
   ) {
-    const statusPage = await this.statusPagesService.update(
+    const result = await this.statusPagesService.update(
       organizationId,
       statusPageId,
       updateStatusPageDto,
     );
-    return ApiResponseDto.success(statusPage, 'Status page updated successfully');
+    return ApiResponseDto.success(result.id, 'Status page updated successfully');
   }
 
   @Delete(':statusPageId')
@@ -131,6 +132,78 @@ export class StatusPagesController {
     @Param('statusPageId') statusPageId: string,
   ) {
     await this.statusPagesService.delete(organizationId, statusPageId);
-    return ApiResponseDto.success(undefined, 'Status page deleted successfully');
+    return ApiResponseDto.success(
+      undefined,
+      'Status page deleted successfully',
+    );
+  }
+
+  @Post(':statusPageId/monitors')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Add a monitor to a status page' })
+  @ApiResponse({ status: 201, type: ApiResponseDto })
+  @ApiBody({ type: AddMonitorToStatusPageDto })
+  async addMonitor(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+    @Body() addMonitorDto: AddMonitorToStatusPageDto,
+  ) {
+    await this.statusPagesService.addMonitor(
+      organizationId,
+      statusPageId,
+      addMonitorDto,
+    );
+    return ApiResponseDto.success(undefined, 'Monitor added to status page');
+  }
+
+  @Get(':statusPageId/monitors')
+  @ApiOperation({ summary: 'Get monitors on a status page' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async getMonitors(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+  ) {
+    const result = await this.statusPagesService.getMonitors(
+      organizationId,
+      statusPageId,
+    );
+    return ApiResponseDto.success(result);
+  }
+
+  @Delete(':statusPageId/monitors/:monitorId')
+  @ApiOperation({ summary: 'Remove a monitor from a status page' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async removeMonitor(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+    @Param('monitorId') monitorId: string,
+  ) {
+    await this.statusPagesService.removeMonitor(
+      organizationId,
+      statusPageId,
+      monitorId,
+    );
+    return ApiResponseDto.success(
+      undefined,
+      'Monitor removed from status page',
+    );
+  }
+
+  @Patch(':statusPageId/monitors/:monitorId/order')
+  @ApiOperation({ summary: 'Update monitor order on a status page' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async updateMonitorOrder(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+    @Param('monitorId') monitorId: string,
+    @Body() body: { order: number },
+  ) {
+    await this.statusPagesService.updateMonitorOrder(
+      organizationId,
+      statusPageId,
+      monitorId,
+      body.order,
+    );
+    return ApiResponseDto.success(undefined, 'Monitor order updated');
   }
 }

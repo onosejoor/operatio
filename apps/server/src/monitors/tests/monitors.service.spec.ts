@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { MonitorStatus } from '@prisma/client';
 import { MonitorsService } from '../monitors.service';
 import { PrismaService } from '../../database/database.service';
@@ -128,6 +128,42 @@ describe('MonitorsService', () => {
     });
   });
 
+  it('throws ConflictException when creating monitor with duplicate URL', async () => {
+    const input = {
+      name: 'API',
+      url: 'https://api.example.com/health',
+      interval: 60,
+      timeout: 10_000,
+    };
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'existing-monitor-id' });
+
+    await expect(
+      service.create('organization-id', input),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.monitor.findFirst).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'organization-id',
+        url: 'https://api.example.com/health',
+      },
+      select: { id: true },
+    });
+  });
+
+  it('allows creating monitor with same URL in different organization', async () => {
+    const input = {
+      name: 'API',
+      url: 'https://api.example.com/health',
+      interval: 60,
+      timeout: 10_000,
+    };
+    prisma.monitor.findFirst.mockResolvedValue(null); // No duplicate in this org
+    transaction.monitor.create.mockResolvedValue({ id: 'monitor-id' });
+
+    await expect(
+      service.create('different-organization-id', input),
+    ).resolves.toBe('monitor-id');
+  });
+
   it('lists only monitors for the requested organization', async () => {
     prisma.monitor.findMany.mockResolvedValue([]);
 
@@ -243,7 +279,7 @@ describe('MonitorsService', () => {
   });
 
   it('updates nextCheckAt when interval changes', async () => {
-    transaction.monitor.findFirst.mockResolvedValue({ interval: 60 });
+    prisma.monitor.findUnique.mockResolvedValue({ interval: 60, url: 'https://old-url.com' });
     transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', {
@@ -267,6 +303,30 @@ describe('MonitorsService', () => {
     });
 
     expect(outboxWriter.writeTx).not.toHaveBeenCalled();
+  });
+
+  it('throws ConflictException when updating to duplicate URL', async () => {
+    prisma.monitor.findUnique.mockResolvedValue({ interval: 60, url: 'https://old-url.com' });
+    prisma.monitor.findFirst.mockResolvedValue({ id: 'existing-monitor-id' });
+
+    await expect(
+      service.update('organization-id', 'monitor-id', {
+        url: 'https://api.example.com/health',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('allows updating URL to same value (no-op)', async () => {
+    prisma.monitor.findUnique.mockResolvedValue({ interval: 60, url: 'https://api.example.com/health' });
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.update('organization-id', 'monitor-id', {
+        url: 'https://api.example.com/health',
+      }),
+    ).resolves.toBeUndefined();
+    // Should not check for duplicates since URL hasn't changed
+    expect(prisma.monitor.findFirst).not.toHaveBeenCalled();
   });
 
   it('reports a missing monitor when no scoped update occurs', async () => {

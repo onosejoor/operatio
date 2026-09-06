@@ -96,9 +96,10 @@ model Monitor {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  checks       MonitorCheck[]
-  incidents    Incident[]
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checks             MonitorCheck[]
+  incidents          Incident[]
+  statusPageMonitors StatusPageMonitor[]
 
   @@index([organizationId])
   @@index([isActive, nextCheckAt])
@@ -148,10 +149,27 @@ model StatusPage {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  statusPageMonitors StatusPageMonitor[]
 
   @@index([organizationId])
   @@map("status_pages")
+}
+
+model StatusPageMonitor {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  statusPageId String     @db.ObjectId
+  monitorId    String     @db.ObjectId
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+  monitor    Monitor    @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@unique([statusPageId, monitorId])
+  @@index([statusPageId])
+  @@index([monitorId])
+  @@map("status_page_monitors")
 }
 
 model Token {
