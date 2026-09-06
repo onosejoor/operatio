@@ -1,8 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
   Max,
@@ -44,4 +46,13 @@ export class CreateMonitorDto {
   @Min(1000)
   @Max(60_000)
   timeout: number = 10_000;
+
+  @ApiProperty({
+    example: true,
+    description: 'Whether the monitor is eligible to appear on a public status page',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isPublic?: boolean;
 }

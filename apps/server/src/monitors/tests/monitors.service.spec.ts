@@ -11,6 +11,7 @@ describe('MonitorsService', () => {
     monitor: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
   };
@@ -19,6 +20,7 @@ describe('MonitorsService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
     monitorCheck: {
@@ -72,6 +74,60 @@ describe('MonitorsService', () => {
     );
   });
 
+  it('creates a monitor with isPublic set to true', async () => {
+    const input = {
+      name: 'API',
+      url: 'https://api.example.com/health',
+      interval: 60,
+      timeout: 10_000,
+      isPublic: true,
+    };
+    transaction.monitor.create.mockResolvedValue({ id: 'monitor-id' });
+
+    await expect(
+      service.create('organization-id', input),
+    ).resolves.toBeUndefined();
+    expect(transaction.monitor.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: 'organization-id',
+        name: 'API',
+        url: 'https://api.example.com/health',
+        interval: 60,
+        timeout: 10_000,
+        isPublic: true,
+        nextCheckAt: expect.any(Date),
+      }),
+      select: { id: true },
+    });
+  });
+
+  it('creates a monitor with isPublic set to false', async () => {
+    const input = {
+      name: 'API',
+      url: 'https://api.example.com/health',
+      interval: 60,
+      timeout: 10_000,
+      isPublic: false,
+    };
+    transaction.monitor.create.mockResolvedValue({ id: 'monitor-id' });
+
+    await expect(
+      service.create('organization-id', input),
+    ).resolves.toBeUndefined();
+    expect(transaction.monitor.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: 'organization-id',
+        name: 'API',
+        url: 'https://api.example.com/health',
+        interval: 60,
+        timeout: 10_000,
+        isPublic: false,
+        nextCheckAt: expect.any(Date),
+      }),
+      select: { id: true },
+    });
+  });
+
   it('lists only monitors for the requested organization', async () => {
     prisma.monitor.findMany.mockResolvedValue([]);
 
@@ -117,8 +173,34 @@ describe('MonitorsService', () => {
     });
   });
 
+  it('updates monitor isPublic to false', async () => {
+    const input = { isPublic: false };
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.update('organization-id', 'monitor-id', input),
+    ).resolves.toBeUndefined();
+    expect(transaction.monitor.updateMany).toHaveBeenCalledWith({
+      where: { id: 'monitor-id', organizationId: 'organization-id' },
+      data: input,
+    });
+  });
+
+  it('updates monitor isPublic to true', async () => {
+    const input = { isPublic: true };
+    transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.update('organization-id', 'monitor-id', input),
+    ).resolves.toBeUndefined();
+    expect(transaction.monitor.updateMany).toHaveBeenCalledWith({
+      where: { id: 'monitor-id', organizationId: 'organization-id' },
+      data: input,
+    });
+  });
+
   it('queues a fresh check when a monitor URL changes', async () => {
-    transaction.monitor.findFirst.mockResolvedValue({ interval: 60 });
+    transaction.monitor.findUnique.mockResolvedValue({ interval: 60 });
     transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
     await service.update('organization-id', 'monitor-id', {
@@ -180,7 +262,9 @@ describe('MonitorsService', () => {
   it('does not queue check when only name changes', async () => {
     transaction.monitor.updateMany.mockResolvedValue({ count: 1 });
 
-    await service.update('organization-id', 'monitor-id', { name: 'Renamed API' });
+    await service.update('organization-id', 'monitor-id', {
+      name: 'Renamed API',
+    });
 
     expect(outboxWriter.writeTx).not.toHaveBeenCalled();
   });
@@ -214,10 +298,15 @@ describe('MonitorsService', () => {
     prisma.monitorCheck.findMany.mockResolvedValue(checks);
     prisma.monitorCheck.count.mockResolvedValue(2);
 
-    const result = await service.getChecks('organization-id', 'monitor-id', 1, 50);
+    const result = await service.getChecks(
+      'organization-id',
+      'monitor-id',
+      1,
+      50,
+    );
 
     expect(result).toEqual({
-      data: checks,
+      checks,
       meta: {
         total: 2,
         page: 1,
@@ -301,7 +390,10 @@ describe('MonitorsService', () => {
       { status: MonitorStatus.UP, responseTimeMs: 150 },
       { status: MonitorStatus.DOWN, responseTimeMs: 200 },
     ];
-    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id', status: MonitorStatus.UP });
+    prisma.monitor.findFirst.mockResolvedValue({
+      id: 'monitor-id',
+      status: MonitorStatus.UP,
+    });
     prisma.monitorCheck.findMany.mockResolvedValue(checks);
 
     const result = await service.getStats('organization-id', 'monitor-id');
@@ -317,7 +409,10 @@ describe('MonitorsService', () => {
   });
 
   it('returns zero stats for a monitor with no checks', async () => {
-    prisma.monitor.findFirst.mockResolvedValue({ id: 'monitor-id', status: MonitorStatus.PENDING });
+    prisma.monitor.findFirst.mockResolvedValue({
+      id: 'monitor-id',
+      status: MonitorStatus.PENDING,
+    });
     prisma.monitorCheck.findMany.mockResolvedValue([]);
 
     const result = await service.getStats('organization-id', 'monitor-id');

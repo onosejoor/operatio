@@ -41,6 +41,17 @@ export class MonitorsController {
           url: 'https://api.example.com/health',
           interval: 60,
           timeout: 10_000,
+          isPublic: true,
+        },
+      },
+      privateMonitor: {
+        summary: 'Private monitor',
+        value: {
+          name: 'Internal API',
+          url: 'https://internal.example.com/health',
+          interval: 60,
+          timeout: 10_000,
+          isPublic: false,
         },
       },
     },
@@ -94,6 +105,14 @@ export class MonitorsController {
       updateInterval: {
         summary: 'Update only the check interval',
         value: { interval: 120 },
+      },
+      makePrivate: {
+        summary: 'Change monitor from public to private',
+        value: { isPublic: false },
+      },
+      makePublic: {
+        summary: 'Change monitor from private to public',
+        value: { isPublic: true },
       },
     },
   })

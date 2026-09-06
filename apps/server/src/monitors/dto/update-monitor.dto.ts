@@ -10,4 +10,12 @@ export class UpdateMonitorDto extends PartialType(CreateMonitorDto) {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether the monitor is eligible to appear on a public status page',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
 }

@@ -50,15 +50,16 @@ model User {
 }
 
 model Organization {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   memberships Membership[]
   monitors    Monitor[]
   incidents   Incident[]
+  statusPages StatusPage[]
 
   @@map("organizations")
 }
@@ -87,6 +88,7 @@ model Monitor {
   timeout            Int           @default(10000)
   status             MonitorStatus @default(PENDING)
   isActive           Boolean       @default(true)
+  isPublic           Boolean       @default(true)
   lastCheckedAt      DateTime?
   lastStatusCode     Int?
   lastResponseTimeMs Int?
@@ -133,6 +135,23 @@ model Incident {
   @@index([monitorId, startedAt])
   @@index([organizationId])
   @@map("incidents")
+}
+
+model StatusPage {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String   @db.ObjectId
+  name           String
+  slug           String   @unique
+  isPublic       Boolean  @default(false)
+  description    String?
+  logo           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("status_pages")
 }
 
 model Token {

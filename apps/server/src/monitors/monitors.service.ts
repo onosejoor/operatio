@@ -15,6 +15,7 @@ const monitorSelect = {
   timeout: true,
   status: true,
   isActive: true,
+  isPublic: true,
   lastCheckedAt: true,
   lastStatusCode: true,
   lastResponseTimeMs: true,
@@ -89,33 +90,33 @@ export class MonitorsService {
     monitorId: string,
     updateMonitorDto: UpdateMonitorDto,
   ): Promise<void> {
+    const updateData: Prisma.MonitorUpdateInput = { ...updateMonitorDto };
+
+    const monitor = await this.prisma.monitor.findUnique({
+      where: { id: monitorId, organizationId },
+      select: { interval: true, url: true },
+    });
+
+    if (monitor) {
+      updateData.nextCheckAt = new Date(
+        Date.now() + (updateMonitorDto.interval || monitor.interval) * 1000,
+      );
+    }
+
     const shouldCheck =
-      updateMonitorDto.isActive === true || updateMonitorDto.url !== undefined;
+      updateMonitorDto.isActive === true ||
+      (updateMonitorDto.url !== undefined &&
+        updateMonitorDto.url !== monitor?.url);
+
+    if (
+      updateMonitorDto.url !== undefined ||
+      updateMonitorDto.isActive === true
+    ) {
+      updateData.status = MonitorStatus.PENDING;
+    }
 
     await this.prisma.$transaction(
       async (tx) => {
-        const updateData: Prisma.MonitorUpdateInput = { ...updateMonitorDto };
-
-        if (updateMonitorDto.interval !== undefined) {
-          const monitor = await tx.monitor.findFirst({
-            where: { id: monitorId, organizationId },
-            select: { interval: true },
-          });
-
-          if (monitor) {
-            updateData.nextCheckAt = new Date(
-              Date.now() + updateMonitorDto.interval * 1000,
-            );
-          }
-        }
-
-        if (
-          updateMonitorDto.url !== undefined ||
-          updateMonitorDto.isActive === true
-        ) {
-          updateData.status = MonitorStatus.PENDING;
-        }
-
         const result = await tx.monitor.updateMany({
           where: { id: monitorId, organizationId },
           data: updateData,

@@ -15,6 +15,7 @@ import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { QueuesModule } from './queues/queues.module';
 import { RedisModule } from './redis/redis.module';
 import { IncidentsModule } from './incidents/incidents.module';
+import { StatusPagesModule } from './status-pages/status-pages.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { IncidentsModule } from './incidents/incidents.module';
     OrganizationsModule,
     MonitorsModule,
     IncidentsModule,
+    StatusPagesModule,
   ],
   controllers: [AppController],
   providers: [
