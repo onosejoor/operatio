@@ -16,6 +16,7 @@ import { QueuesModule } from './queues/queues.module';
 import { RedisModule } from './redis/redis.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { StatusPagesModule } from './status-pages/status-pages.module';
+import { CommonGuardsModule } from './common/guards/common-guards.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { StatusPagesModule } from './status-pages/status-pages.module';
     MonitorsModule,
     IncidentsModule,
     StatusPagesModule,
+    CommonGuardsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -7,10 +7,9 @@ import {
   IncidentsController,
   OrganizationIncidentsController,
 } from './incidents.controller';
-import { AuthModule } from '@/auth/auth.module';
 
 @Module({
-  imports: [OutboxModule, PrismaModule, AuthModule],
+  imports: [OutboxModule, PrismaModule],
   providers: [IncidentConsumer, IncidentsService],
   controllers: [IncidentsController, OrganizationIncidentsController],
 })
