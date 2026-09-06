@@ -11,7 +11,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { QueryDto } from '../common/dto/query.dto';
 import { OrganizationMembershipGuard } from '../common/guards/organization-membership.guard';
@@ -60,8 +66,14 @@ export class MonitorsController {
     @CurrentOrganizationId() organizationId: string,
     @Body() createMonitorDto: CreateMonitorDto,
   ) {
-    await this.monitorsService.create(organizationId, createMonitorDto);
-    return ApiResponseDto.success(undefined, 'Monitor created successfully');
+    const monitorId = await this.monitorsService.create(
+      organizationId,
+      createMonitorDto,
+    );
+    return ApiResponseDto.success(
+      { id: monitorId },
+      'Monitor created successfully',
+    );
   }
 
   @Get()

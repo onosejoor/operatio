@@ -32,8 +32,8 @@ export class MonitorsService {
   async create(
     organizationId: string,
     createMonitorDto: CreateMonitorDto,
-  ): Promise<void> {
-    await this.prisma.$transaction(
+  ): Promise<string> {
+    return await this.prisma.$transaction(
       async (tx) => {
         const interval = createMonitorDto.interval || 60;
         const now = new Date();
