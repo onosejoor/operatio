@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "@operatio/ui/globals.css";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
