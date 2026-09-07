@@ -1,21 +1,19 @@
-import type { PublicStatusResponse } from "../types/public-status";
+import { apiFetch } from "@app/lib/api/client";
+import type { PublicStatusResponse, MetricsResponse } from "../types/public-status";
+import { ApiResponse } from "@app/lib/types";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v";
+export async function getPublicStatus(slug: string) {
+  const response = await apiFetch<ApiResponse<PublicStatusResponse>>(
+    `/public/status/${slug}`,
+  );
 
-export async function getPublicStatus(
-  slug: string,
-): Promise<PublicStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/public/status/${slug}`, {
-    cache: "no-store",
-  });
+  return response.data;
+}
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Status page not found");
-    }
-    throw new Error("Failed to fetch status page");
-  }
+export async function getPublicStatusMetrics(slug: string) {
+  const response = await apiFetch<ApiResponse<MetricsResponse>>(
+    `/public/status/${slug}/metrics`,
+  );
 
-  return response.json();
+  return response.data;
 }

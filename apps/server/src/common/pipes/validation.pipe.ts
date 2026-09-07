@@ -11,7 +11,6 @@ export class CustomValidationPipe extends ValidationPipe {
         enableImplicitConversion: true,
       },
       exceptionFactory: (errors: ValidationError[]) => {
-        console.log(errors);
         const formattedErrors = errors.reduce(
           (acc, error) => {
             acc[error.property] = Object.values(error.constraints || {}).join(

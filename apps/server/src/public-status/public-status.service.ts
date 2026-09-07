@@ -9,6 +9,8 @@ import {
   PublicIncidentDto,
   PublicStatusPageDto,
   MonitorPerformanceStatus,
+  DailyUptimeDto,
+  MetricsResponseDto,
 } from './dto/public-status.dto';
 
 @Injectable()
@@ -16,18 +18,7 @@ export class PublicStatusService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getPublicStatus(slug: string): Promise<PublicStatusResponseDto> {
-    const statusPage = await this.prisma.statusPage.findUnique({
-      where: { slug },
-      select: {
-        id: true,
-        organizationId: true,
-        name: true,
-        slug: true,
-        description: true,
-        logo: true,
-        isPublic: true,
-      },
-    });
+    const statusPage = await this.getStatusPage(slug);
 
     if (!statusPage || !statusPage.isPublic) {
       throw new NotFoundException('Status page not found');
@@ -51,6 +42,21 @@ export class PublicStatusService {
       monitors,
       incidents,
     };
+  }
+
+  async getStatusPage(slug: string) {
+    return await this.prisma.statusPage.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        organizationId: true,
+        name: true,
+        slug: true,
+        description: true,
+        logo: true,
+        isPublic: true,
+      },
+    });
   }
 
   private async getPublicMonitors(
@@ -81,9 +87,10 @@ export class PublicStatusService {
     const monitorDtos: PublicMonitorDto[] = [];
 
     for (const monitor of activePublicMonitors) {
-      const [uptime, responseTime] = await Promise.all([
+      const [uptime, responseTime, dailyUptime] = await Promise.all([
         this.calculateUptime(monitor.id),
         this.getLatestResponseTime(monitor.id, monitor.lastResponseTimeMs),
+        this.calculateDailyUptime(monitor.id),
       ]);
 
       const performanceStatus = this.calculatePerformanceStatus(
@@ -96,6 +103,7 @@ export class PublicStatusService {
         status: performanceStatus,
         uptime,
         responseTime,
+        dailyUptime,
       });
     }
 
@@ -198,19 +206,19 @@ export class PublicStatusService {
   }
 
   private async calculateUptime(monitorId: string): Promise<number> {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
     const [totalChecks, upChecks] = await Promise.all([
       this.prisma.monitorCheck.count({
         where: {
           monitorId,
-          checkedAt: { gte: thirtyDaysAgo },
+          checkedAt: { gte: ninetyDaysAgo },
         },
       }),
       this.prisma.monitorCheck.count({
         where: {
           monitorId,
-          checkedAt: { gte: thirtyDaysAgo },
+          checkedAt: { gte: ninetyDaysAgo },
           status: MonitorStatus.UP,
         },
       }),
@@ -238,5 +246,149 @@ export class PublicStatusService {
     });
 
     return latestCheck?.responseTimeMs;
+  }
+
+  private async calculateDailyUptime(
+    monitorId: string,
+  ): Promise<DailyUptimeDto[]> {
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    
+    // Fetch all checks for the 90-day period in a single query
+    const allChecks = await this.prisma.monitorCheck.findMany({
+      where: {
+        monitorId,
+        checkedAt: {
+          gte: ninetyDaysAgo,
+        },
+      },
+      select: {
+        status: true,
+        checkedAt: true,
+      },
+      orderBy: {
+        checkedAt: 'asc',
+      },
+    });
+
+    // Group checks by day and calculate uptime
+    const dailyUptime: DailyUptimeDto[] = [];
+    const dailyChecks = new Map<string, { total: number; up: number }>();
+
+    // Initialize all 90 days
+    for (let i = 89; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const dateKey = date.toISOString().split('T')[0];
+      dailyChecks.set(dateKey, { total: 0, up: 0 });
+    }
+
+    // Aggregate checks by day
+    for (const check of allChecks) {
+      const dateKey = check.checkedAt.toISOString().split('T')[0];
+      const dayData = dailyChecks.get(dateKey);
+      if (dayData) {
+        dayData.total++;
+        if (check.status === MonitorStatus.UP) {
+          dayData.up++;
+        }
+      }
+    }
+
+    // Convert to array format
+    for (let i = 89; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const dateKey = date.toISOString().split('T')[0];
+      const dayData = dailyChecks.get(dateKey);
+
+      let uptimePercentage: number | null = null;
+      if (dayData && dayData.total > 0) {
+        uptimePercentage = Math.round((dayData.up / dayData.total) * 10000) / 100;
+      }
+
+      dailyUptime.push({
+        date: dateKey,
+        uptimePercentage,
+      });
+    }
+
+    return dailyUptime;
+  }
+
+  async getMetrics(statusPageId: string): Promise<MetricsResponseDto> {
+    const statusPageMonitors = await this.prisma.statusPageMonitor.findMany({
+      where: { statusPageId },
+      select: { monitorId: true },
+    });
+
+    const monitorIds = statusPageMonitors.map((spm) => spm.monitorId);
+
+    if (monitorIds.length === 0) {
+      return {};
+    }
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    // Calculate average latency and success rate from recent checks
+    const recentChecks = await this.prisma.monitorCheck.findMany({
+      where: {
+        monitorId: { in: monitorIds },
+        checkedAt: { gte: oneHourAgo },
+      },
+      select: {
+        status: true,
+        responseTimeMs: true,
+      },
+    });
+
+    let averageLatency: number | undefined;
+    let successRate: number | undefined;
+
+    if (recentChecks.length > 0) {
+      const totalResponseTime = recentChecks.reduce(
+        (sum, check) => sum + (check.responseTimeMs || 0),
+        0,
+      );
+      averageLatency = Math.round(totalResponseTime / recentChecks.length);
+
+      const upChecks = recentChecks.filter(
+        (check) => check.status === MonitorStatus.UP,
+      ).length;
+      successRate = Math.round((upChecks / recentChecks.length) * 10000) / 100;
+    }
+
+    // Calculate incident metrics
+    const incidents = await this.prisma.incident.findMany({
+      where: {
+        monitorId: { in: monitorIds },
+        startedAt: { gte: oneHourAgo },
+      },
+      select: {
+        startedAt: true,
+        resolvedAt: true,
+      },
+    });
+
+    const activeIncidents = incidents.filter((inc) => !inc.resolvedAt).length;
+
+    let averageIncidentDuration: number | undefined;
+    const resolvedIncidents = incidents.filter((inc) => inc.resolvedAt);
+    if (resolvedIncidents.length > 0) {
+      const totalDuration = resolvedIncidents.reduce(
+        (sum, inc) =>
+          sum + (inc.resolvedAt!.getTime() - inc.startedAt.getTime()) / 1000,
+        0,
+      );
+      averageIncidentDuration = Math.round(totalDuration / resolvedIncidents.length);
+    }
+
+    return {
+      averageLatency,
+      successRate,
+      activeIncidents,
+      averageIncidentDuration,
+    };
   }
 }

@@ -1,10 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getPublicStatus } from '../public-status';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { getPublicStatus } from '../public-status'
+import { apiFetch } from '@app/lib/api/client'
+
+// Mock the shared API client
+vi.mock('@/lib/api/client')
 
 describe('getPublicStatus', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   it('fetches public status data successfully', async () => {
     const mockData = {
@@ -16,63 +20,34 @@ describe('getPublicStatus', () => {
       status: 'operational' as const,
       monitors: [],
       incidents: [],
-    };
+    }
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockData,
-    }) as any;
+    vi.mocked(apiFetch).mockResolvedValueOnce(mockData)
 
-    const result = await getPublicStatus('test');
+    const result = await getPublicStatus('test')
 
-    expect(result).toEqual(mockData);
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/public/status/test'),
-      expect.objectContaining({ cache: 'no-store' })
-    );
-  });
+    expect(result).toEqual(mockData)
+    expect(apiFetch).toHaveBeenCalledWith('/public/status/test')
+  })
 
-  it('throws error for 404 response', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    }) as any;
+  it('throws NotFoundError on 404', async () => {
+    const { NotFoundError } = await import('@app/lib/api/client')
+    vi.mocked(apiFetch).mockRejectedValueOnce(new NotFoundError('Status page not found'))
 
-    await expect(getPublicStatus('nonexistent')).rejects.toThrow('Status page not found');
-  });
+    await expect(getPublicStatus('nonexistent')).rejects.toThrow('Status page not found')
+  })
 
-  it('throws error for other failed responses', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-    }) as any;
+  it('throws ApiError on other failed responses', async () => {
+    const { ApiError } = await import('@app/lib/api/client')
+    vi.mocked(apiFetch).mockRejectedValueOnce(new ApiError('Failed to fetch status page', 500))
 
-    await expect(getPublicStatus('test')).rejects.toThrow('Failed to fetch status page');
-  });
+    await expect(getPublicStatus('test')).rejects.toThrow('Failed to fetch status page')
+  })
 
-  it('uses correct API base URL from environment', async () => {
-    process.env.NEXT_PUBLIC_API_URL = 'https://api.example.com';
-    
-    const mockData = {
-      statusPage: {
-        name: 'Test Status',
-        slug: 'test',
-      },
-      status: 'operational' as const,
-      monitors: [],
-      incidents: [],
-    };
+  it('throws NetworkError on network failure', async () => {
+    const { NetworkError } = await import('@app/lib/api/client')
+    vi.mocked(apiFetch).mockRejectedValueOnce(new NetworkError('Network error'))
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockData,
-    }) as any;
-
-    await getPublicStatus('test');
-
-    expect(fetch).toHaveBeenCalledWith(
-      'https://api.example.com/public/status/test',
-      expect.objectContaining({ cache: 'no-store' })
-    );
-  });
-});
+    await expect(getPublicStatus('test')).rejects.toThrow('Network error')
+  })
+})

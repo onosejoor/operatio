@@ -27,6 +27,14 @@ export class PublicStatusPageDto {
   logo?: string;
 }
 
+export class DailyUptimeDto {
+  @ApiProperty({ example: '2024-01-15' })
+  date!: string;
+
+  @ApiProperty({ example: 99.5, required: false })
+  uptimePercentage?: number | null;
+}
+
 export class PublicMonitorDto {
   @ApiProperty({ example: 'API' })
   name!: string;
@@ -39,6 +47,9 @@ export class PublicMonitorDto {
 
   @ApiProperty({ example: 142, required: false })
   responseTime?: number;
+
+  @ApiProperty({ type: [DailyUptimeDto], required: false })
+  dailyUptime?: DailyUptimeDto[];
 }
 
 export class PublicIncidentDto {
@@ -70,4 +81,18 @@ export class PublicStatusResponseDto {
 
   @ApiProperty({ type: [PublicIncidentDto] })
   incidents!: PublicIncidentDto[];
+}
+
+export class MetricsResponseDto {
+  @ApiProperty({ example: 150, required: false })
+  averageLatency?: number;
+
+  @ApiProperty({ example: 99.5, required: false })
+  successRate?: number;
+
+  @ApiProperty({ example: 2, required: false })
+  activeIncidents?: number;
+
+  @ApiProperty({ example: 3600, required: false })
+  averageIncidentDuration?: number;
 }
