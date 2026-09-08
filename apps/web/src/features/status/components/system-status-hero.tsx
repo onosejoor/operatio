@@ -20,7 +20,10 @@ export function SystemStatusHero({
   const affectedMonitors = monitors.filter(
     (m) => m.status !== MonitorPerformanceStatus.UP,
   );
-  const affectedNames = affectedMonitors.map((m) => m.name).join(", ");
+  const affectedNames =
+    affectedMonitors.length > 3
+      ? `${affectedMonitors.slice(0, 2).map((m) => m.name).join(", ")} and ${affectedMonitors.length - 2} others`
+      : affectedMonitors.map((m) => m.name).join(", ");
 
   let description = "Everything is running normally without disruption.";
   if (status === OverallStatus.MAJOR_OUTAGE) {
