@@ -8,20 +8,28 @@ export const statusKeys = {
   metrics: (slug: string) => [...statusKeys.all, 'metrics', slug] as const,
 }
 
-export function usePublicStatus(slug: string) {
+export function usePublicStatus(
+  slug: string,
+  initialData?: PublicStatusResponse,
+) {
   return useQuery<PublicStatusResponse>({
     queryKey: statusKeys.public(slug),
     queryFn: () => getPublicStatus(slug),
     enabled: !!slug,
+    initialData,
     retry: false,
   })
 }
 
-export function usePublicStatusMetrics(slug: string) {
+export function usePublicStatusMetrics(
+  slug: string,
+  initialData?: MetricsResponse,
+) {
   return useQuery<MetricsResponse>({
     queryKey: statusKeys.metrics(slug),
     queryFn: () => getPublicStatusMetrics(slug),
     enabled: !!slug,
+    initialData,
     retry: false,
     refetchInterval: 60000, // Refresh metrics every minute
   })

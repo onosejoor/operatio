@@ -16,29 +16,12 @@ function barColor(pct?: number | null) {
 }
 
 function getTooltipText(pct?: number | null, date?: string) {
-  if (pct === null || pct === undefined) return `${date}: No data`;
-  if (pct >= 99.5) return `${date}: ${pct.toFixed(2)}% uptime`;
-  if (pct >= 95) return `${date}: ${pct.toFixed(2)}% uptime (degraded)`;
-  return `${date}: ${pct.toFixed(2)}% uptime (outage)`;
-}
-
-function getMonthLabels(data: DailyUptime[]): string[] {
-  if (data.length === 0) return [];
-
-  // Get unique months from the data (at most 4 labels)
-  const uniqueMonths = new Set<string>();
-  data.forEach((day) => {
-    uniqueMonths.add(format(new Date(day.date), "MMM"));
-  });
-
-  // Convert to array and take first 3, plus last
-  const monthArray = Array.from(uniqueMonths);
-  if (monthArray.length <= 4) {
-    return monthArray;
-  }
-
-  // Take first 3 and last
-  return [...monthArray.slice(0, 3), monthArray[monthArray.length - 1]];
+  if (!date) return "No data";
+  const formattedDate = format(new Date(date), "MMM d, yyyy");
+  if (pct === null || pct === undefined) return `${formattedDate}: No checks logged`;
+  if (pct >= 99.5) return `${formattedDate}: ${pct.toFixed(2)}% uptime (Operational)`;
+  if (pct >= 95) return `${formattedDate}: ${pct.toFixed(2)}% uptime (Degraded)`;
+  return `${formattedDate}: ${pct.toFixed(2)}% uptime (Outage detected)`;
 }
 
 export function UptimeBars({
@@ -48,12 +31,12 @@ export function UptimeBars({
   data: DailyUptime[];
   className?: string;
 }) {
-  const monthLabels = getMonthLabels(data);
+  if (!data || data.length === 0) return null;
 
   return (
-    <div className={cn("w-full", className)}>
-      <TooltipProvider>
-        <div className="flex h-8 w-full items-end gap-[2px]">
+    <div className={cn("w-full space-y-2", className)}>
+      <TooltipProvider delay={50}>
+        <div className="flex h-7 w-full items-end gap-[2px] overflow-hidden rounded-sm">
           {data.map((day) => {
             const tooltipText = getTooltipText(day.uptimePercentage, day.date);
 
@@ -63,7 +46,7 @@ export function UptimeBars({
                   render={
                     <div
                       className={cn(
-                        "h-full flex-1 rounded-[2px] transition-all hover:opacity-80 cursor-pointer",
+                        "h-full flex-1 rounded-[1.5px] transition-all hover:scale-y-110 hover:opacity-100 opacity-85 cursor-pointer",
                         barColor(day.uptimePercentage),
                       )}
                       role="img"
@@ -71,19 +54,19 @@ export function UptimeBars({
                     />
                   }
                 />
-                <TooltipContent side="top">{tooltipText}</TooltipContent>
+                <TooltipContent side="top" className="font-mono text-[11px] shadow-lg">
+                  {tooltipText}
+                </TooltipContent>
               </Tooltip>
             );
           })}
         </div>
       </TooltipProvider>
-      <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+
+      {/* Axis metadata */}
+      <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
         <span>{data.length} days ago</span>
-        <div className="flex gap-4">
-          {monthLabels.map((month) => (
-            <span key={month}>{month}</span>
-          ))}
-        </div>
+        <span className="hidden sm:inline">Rolling 90-Day SLA Window</span>
         <span>Today</span>
       </div>
     </div>
