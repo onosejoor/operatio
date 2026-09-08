@@ -2,22 +2,25 @@ import { MonitorPerformanceStatus, OverallStatus } from "@app/features/status/ty
 
 export const overallStatusConfig: Record<
   OverallStatus,
-  { label: string; dotClass: string; badgeClass: string }
+  { label: string; dotClass: string; badgeClass: string; textClass: string }
 > = {
   [OverallStatus.OPERATIONAL]: {
     label: "All Systems Operational",
     dotClass: "bg-status-operational",
     badgeClass: "bg-status-operational/10 text-status-operational",
+    textClass: "text-status-operational",
   },
   [OverallStatus.DEGRADED]: {
     label: "Degraded Performance",
     dotClass: "bg-status-degraded",
     badgeClass: "bg-status-degraded/10 text-status-degraded",
+    textClass: "text-status-degraded",
   },
   [OverallStatus.MAJOR_OUTAGE]: {
     label: "Major Outage",
     dotClass: "bg-status-outage",
     badgeClass: "bg-status-outage/10 text-status-outage",
+    textClass: "text-status-outage",
   },
 };
 

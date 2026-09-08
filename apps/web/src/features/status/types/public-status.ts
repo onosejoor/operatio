@@ -26,8 +26,8 @@ export interface DailyUptime {
 export interface PublicMonitor {
   name: string;
   status: MonitorPerformanceStatus;
-  uptime?: number;
-  responseTime?: number;
+  uptime?: number | null;
+  responseTime?: number | null;
   dailyUptime?: DailyUptime[];
 }
 
@@ -44,6 +44,7 @@ export interface PublicStatusResponse {
   status: OverallStatus;
   monitors: PublicMonitor[];
   incidents: PublicIncident[];
+  aggregateUptime?: number | null;
 }
 
 export interface MetricsResponse {

@@ -10,11 +10,16 @@
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
 
-  /* Core semantic colors */
+  /* =========================================================
+     Core semantic colors
+     ========================================================= */
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
 
@@ -36,20 +41,29 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Operatio brand */
+  /* =========================================================
+     Operatio brand
+     ========================================================= */
+
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-muted: var(--brand-muted);
   --color-brand-accent: var(--brand-accent);
 
-  /* Charts */
+  /* =========================================================
+     Charts / data visualization
+     ========================================================= */
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  /* Sidebar */
+  /* =========================================================
+     Sidebar
+     ========================================================= */
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -59,15 +73,23 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Monitoring status */
+  /* =========================================================
+     Monitoring status
+     ========================================================= */
+
   --color-status-operational: var(--status-operational);
   --color-status-operational-foreground: var(--status-operational-foreground);
+
   --color-status-degraded: var(--status-degraded);
   --color-status-degraded-foreground: var(--status-degraded-foreground);
+
   --color-status-outage: var(--status-outage);
   --color-status-outage-foreground: var(--status-outage-foreground);
 
-  /* Radius */
+  /* =========================================================
+     Radius
+     ========================================================= */
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -77,10 +99,14 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ===========================================================
+   LIGHT THEME
+   =========================================================== */
+
 :root {
-  /* =========================================================
-Operatio Light Theme
-========================================================= */
+  /* ---------------------------------------------------------
+     Base
+     --------------------------------------------------------- */
 
   --background: oklch(0.985 0.004 270);
   --foreground: oklch(0.17 0.025 270);
@@ -91,15 +117,29 @@ Operatio Light Theme
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.025 270);
 
-  /* Operatio primary — indigo/violet */
+  /* ---------------------------------------------------------
+     Primary — Operatio Indigo / Violet
+     --------------------------------------------------------- */
+
   --primary: oklch(0.55 0.22 275);
   --primary-foreground: oklch(0.985 0 0);
 
-  /* Operatio brand tokens */
+  /* ---------------------------------------------------------
+     Brand
+     --------------------------------------------------------- */
+
   --brand: oklch(0.55 0.22 275);
   --brand-foreground: oklch(0.985 0 0);
+
+  /* Soft brand surface */
   --brand-muted: oklch(0.94 0.035 275);
+
+  /* Operatio Cyan */
   --brand-accent: oklch(0.72 0.14 205);
+
+  /* ---------------------------------------------------------
+     Secondary / surfaces
+     --------------------------------------------------------- */
 
   --secondary: oklch(0.95 0.015 270);
   --secondary-foreground: oklch(0.25 0.04 270);
@@ -110,30 +150,46 @@ Operatio Light Theme
   --accent: oklch(0.94 0.025 275);
   --accent-foreground: oklch(0.28 0.08 275);
 
+  /* ---------------------------------------------------------
+     System
+     --------------------------------------------------------- */
+
   --destructive: oklch(0.58 0.22 25);
 
   --border: oklch(0.9 0.015 270);
   --input: oklch(0.9 0.015 270);
   --ring: oklch(0.55 0.22 275);
 
-  /* Charts */
+  /* ---------------------------------------------------------
+     Data visualization
+     --------------------------------------------------------- */
+
   --chart-1: oklch(0.55 0.22 275);
   --chart-2: oklch(0.68 0.16 205);
-  --chart-3: oklch(0.62 0.16 155);
-  --chart-4: oklch(0.72 0.15 85);
-  --chart-5: oklch(0.62 0.18 25);
+  --chart-3: oklch(0.64 0.17 150);
+  --chart-4: oklch(0.72 0.16 85);
+  --chart-5: oklch(0.58 0.22 25);
 
-  /* Sidebar */
+  /* ---------------------------------------------------------
+     Sidebar
+     --------------------------------------------------------- */
+
   --sidebar: oklch(0.98 0.006 270);
   --sidebar-foreground: oklch(0.2 0.025 270);
+
   --sidebar-primary: oklch(0.55 0.22 275);
   --sidebar-primary-foreground: oklch(0.985 0 0);
+
   --sidebar-accent: oklch(0.94 0.025 275);
   --sidebar-accent-foreground: oklch(0.28 0.08 275);
+
   --sidebar-border: oklch(0.9 0.015 270);
   --sidebar-ring: oklch(0.55 0.22 275);
 
-  /* Monitoring */
+  /* ---------------------------------------------------------
+     Monitoring states
+     --------------------------------------------------------- */
+
   --status-operational: oklch(0.64 0.17 150);
   --status-operational-foreground: oklch(0.985 0 0);
 
@@ -146,12 +202,16 @@ Operatio Light Theme
   --radius: 0.625rem;
 }
 
-.dark {
-  /* =========================================================
-Operatio Dark Theme
-========================================================= */
+/* ===========================================================
+   DARK THEME
+   =========================================================== */
 
-  --background: oklch(0.12 0.018 270);
+.dark {
+  /* ---------------------------------------------------------
+     Base
+     --------------------------------------------------------- */
+
+  --background: oklch(0.10 0.018 270);
   --foreground: oklch(0.96 0.008 270);
 
   --card: oklch(0.16 0.022 270);
@@ -160,15 +220,29 @@ Operatio Dark Theme
   --popover: oklch(0.16 0.022 270);
   --popover-foreground: oklch(0.96 0.008 270);
 
-  /* Brighter primary for dark surfaces */
+  /* ---------------------------------------------------------
+     Primary — brighter Operatio Indigo / Violet
+     --------------------------------------------------------- */
+
   --primary: oklch(0.68 0.19 275);
   --primary-foreground: oklch(0.12 0.018 270);
 
-  /* Operatio brand */
+  /* ---------------------------------------------------------
+     Brand
+     --------------------------------------------------------- */
+
   --brand: oklch(0.68 0.19 275);
   --brand-foreground: oklch(0.12 0.018 270);
+
+  /* Soft brand surface */
   --brand-muted: oklch(0.25 0.055 275);
+
+  /* Operatio Cyan */
   --brand-accent: oklch(0.72 0.14 205);
+
+  /* ---------------------------------------------------------
+     Secondary / surfaces
+     --------------------------------------------------------- */
 
   --secondary: oklch(0.22 0.025 270);
   --secondary-foreground: oklch(0.94 0.008 270);
@@ -179,30 +253,46 @@ Operatio Dark Theme
   --accent: oklch(0.24 0.045 275);
   --accent-foreground: oklch(0.88 0.045 275);
 
+  /* ---------------------------------------------------------
+     System
+     --------------------------------------------------------- */
+
   --destructive: oklch(0.66 0.2 25);
 
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.68 0.19 275);
 
-  /* Charts */
+  /* ---------------------------------------------------------
+     Data visualization
+     --------------------------------------------------------- */
+
   --chart-1: oklch(0.68 0.19 275);
   --chart-2: oklch(0.72 0.14 205);
-  --chart-3: oklch(0.7 0.15 155);
+  --chart-3: oklch(0.7 0.15 150);
   --chart-4: oklch(0.78 0.14 85);
-  --chart-5: oklch(0.68 0.18 25);
+  --chart-5: oklch(0.66 0.2 25);
 
-  /* Sidebar */
+  /* ---------------------------------------------------------
+     Sidebar
+     --------------------------------------------------------- */
+
   --sidebar: oklch(0.145 0.022 270);
   --sidebar-foreground: oklch(0.94 0.008 270);
+
   --sidebar-primary: oklch(0.68 0.19 275);
   --sidebar-primary-foreground: oklch(0.12 0.018 270);
+
   --sidebar-accent: oklch(0.23 0.045 275);
   --sidebar-accent-foreground: oklch(0.88 0.045 275);
+
   --sidebar-border: oklch(1 0 0 / 9%);
   --sidebar-ring: oklch(0.68 0.19 275);
 
-  /* Monitoring */
+  /* ---------------------------------------------------------
+     Monitoring states
+     --------------------------------------------------------- */
+
   --status-operational: oklch(0.72 0.15 150);
   --status-operational-foreground: oklch(0.12 0.018 270);
 
@@ -212,6 +302,10 @@ Operatio Dark Theme
   --status-outage: oklch(0.66 0.2 25);
   --status-outage-foreground: oklch(0.985 0 0);
 }
+
+/* ===========================================================
+   BASE
+   =========================================================== */
 
 @layer base {
   * {

@@ -31,6 +31,10 @@ export class PublicStatusService {
 
     const overallStatus = this.calculateOverallStatus(monitors);
 
+    // Calculate aggregate uptime from all selected monitors' checks
+    const monitorIds = await this.getMonitorIds(statusPage.id);
+    const aggregateUptime = await this.calculateAggregateUptime(monitorIds);
+
     return {
       statusPage: {
         name: statusPage.name,
@@ -41,6 +45,7 @@ export class PublicStatusService {
       status: overallStatus,
       monitors,
       incidents,
+      aggregateUptime,
     };
   }
 
@@ -59,6 +64,14 @@ export class PublicStatusService {
     });
   }
 
+  private async getMonitorIds(statusPageId: string): Promise<string[]> {
+    const statusPageMonitors = await this.prisma.statusPageMonitor.findMany({
+      where: { statusPageId },
+      select: { monitorId: true },
+    });
+    return statusPageMonitors.map((spm) => spm.monitorId);
+  }
+
   private async getPublicMonitors(
     statusPageId: string,
   ): Promise<PublicMonitorDto[]> {
@@ -70,7 +83,6 @@ export class PublicStatusService {
             id: true,
             name: true,
             status: true,
-            lastResponseTimeMs: true,
             isPublic: true,
             isActive: true,
           },
@@ -89,20 +101,20 @@ export class PublicStatusService {
     for (const monitor of activePublicMonitors) {
       const [uptime, responseTime, dailyUptime] = await Promise.all([
         this.calculateUptime(monitor.id),
-        this.getLatestResponseTime(monitor.id, monitor.lastResponseTimeMs),
+        this.calculateAverageResponseTime(monitor.id),
         this.calculateDailyUptime(monitor.id),
       ]);
 
       const performanceStatus = this.calculatePerformanceStatus(
         monitor.status,
-        responseTime,
+        responseTime ?? undefined,
       );
 
       monitorDtos.push({
         name: monitor.name,
         status: performanceStatus,
         uptime,
-        responseTime,
+        responseTime: responseTime ?? undefined,
         dailyUptime,
       });
     }
@@ -181,7 +193,7 @@ export class PublicStatusService {
 
   private calculatePerformanceStatus(
     status: MonitorStatus,
-    responseTime?: number,
+    responseTime?: number | null,
   ): MonitorPerformanceStatus {
     // If monitor is DOWN, it's DOWN regardless of response time
     if (status === MonitorStatus.DOWN) {
@@ -196,6 +208,7 @@ export class PublicStatusService {
     // If monitor is UP but response time is slow, mark as SLOW
     if (
       responseTime !== undefined &&
+      responseTime !== null &&
       responseTime >= PERFORMANCE_THRESHOLDS.SLOW_RESPONSE_TIME_MS
     ) {
       return MonitorPerformanceStatus.SLOW;
@@ -205,7 +218,7 @@ export class PublicStatusService {
     return MonitorPerformanceStatus.UP;
   }
 
-  private async calculateUptime(monitorId: string): Promise<number> {
+  private async calculateUptime(monitorId: string): Promise<number | null> {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
     const [totalChecks, upChecks] = await Promise.all([
@@ -225,7 +238,37 @@ export class PublicStatusService {
     ]);
 
     if (totalChecks === 0) {
-      return 100;
+      return null;
+    }
+
+    return Math.round((upChecks / totalChecks) * 10000) / 100;
+  }
+
+  private async calculateAggregateUptime(monitorIds: string[]): Promise<number | null> {
+    if (monitorIds.length === 0) {
+      return null;
+    }
+
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+    const [totalChecks, upChecks] = await Promise.all([
+      this.prisma.monitorCheck.count({
+        where: {
+          monitorId: { in: monitorIds },
+          checkedAt: { gte: ninetyDaysAgo },
+        },
+      }),
+      this.prisma.monitorCheck.count({
+        where: {
+          monitorId: { in: monitorIds },
+          checkedAt: { gte: ninetyDaysAgo },
+          status: MonitorStatus.UP,
+        },
+      }),
+    ]);
+
+    if (totalChecks === 0) {
+      return null;
     }
 
     return Math.round((upChecks / totalChecks) * 10000) / 100;
@@ -246,6 +289,22 @@ export class PublicStatusService {
     });
 
     return latestCheck?.responseTimeMs;
+  }
+
+  private async calculateAverageResponseTime(monitorId: string): Promise<number | null> {
+    const checks = await this.prisma.monitorCheck.findMany({
+      where: { monitorId },
+      orderBy: { checkedAt: 'desc' },
+      take: 100,
+      select: { responseTimeMs: true },
+    });
+
+    if (checks.length === 0) {
+      return null;
+    }
+
+    const totalResponseTime = checks.reduce((sum, c) => sum + c.responseTimeMs, 0);
+    return Math.round(totalResponseTime / checks.length);
   }
 
   private async calculateDailyUptime(

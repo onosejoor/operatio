@@ -42,11 +42,11 @@ export class PublicMonitorDto {
   @ApiProperty({ enum: MonitorPerformanceStatus, example: MonitorPerformanceStatus.UP })
   status!: MonitorPerformanceStatus;
 
-  @ApiProperty({ example: 99.98, required: false })
-  uptime?: number;
+  @ApiProperty({ example: 99.98, required: false, nullable: true })
+  uptime?: number | null;
 
-  @ApiProperty({ example: 142, required: false })
-  responseTime?: number;
+  @ApiProperty({ example: 142, required: false, nullable: true })
+  responseTime?: number | null;
 
   @ApiProperty({ type: [DailyUptimeDto], required: false })
   dailyUptime?: DailyUptimeDto[];
@@ -81,6 +81,9 @@ export class PublicStatusResponseDto {
 
   @ApiProperty({ type: [PublicIncidentDto] })
   incidents!: PublicIncidentDto[];
+
+  @ApiProperty({ example: 99.5, required: false, nullable: true })
+  aggregateUptime?: number | null;
 }
 
 export class MetricsResponseDto {
