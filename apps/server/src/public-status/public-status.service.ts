@@ -85,6 +85,7 @@ export class PublicStatusService {
             status: true,
             isPublic: true,
             isActive: true,
+            lastStatusCode: true,
           },
         },
       },
@@ -115,6 +116,7 @@ export class PublicStatusService {
         status: performanceStatus,
         uptime,
         responseTime: responseTime ?? undefined,
+        lastStatusCode: monitor.lastStatusCode ?? undefined,
         dailyUptime,
       });
     }
@@ -142,8 +144,22 @@ export class PublicStatusService {
       },
       select: {
         id: true,
+        title: true,
+        status: true,
+        severity: true,
+        publicMessage: true,
         detectedAt: true,
         resolvedAt: true,
+        durationMs: true,
+        events: {
+          select: {
+            type: true,
+            status: true,
+            message: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
       orderBy: { detectedAt: 'desc' },
       take: 50,
@@ -152,6 +168,10 @@ export class PublicStatusService {
     return incidents.map((incident) => ({
       id: incident.id,
       status: incident.resolvedAt ? 'resolved' : 'active',
+      incidentStatus: incident.status,
+      title: incident.title ?? undefined,
+      severity: incident.severity ?? undefined,
+      publicMessage: incident.publicMessage ?? undefined,
       startedAt: incident.detectedAt.toISOString(),
       resolvedAt: incident.resolvedAt?.toISOString(),
       duration: incident.resolvedAt
@@ -160,6 +180,13 @@ export class PublicStatusService {
               1000,
           )
         : undefined,
+      durationMs: incident.durationMs ?? undefined,
+      events: incident.events.map((e) => ({
+        type: e.type,
+        status: e.status ?? undefined,
+        message: e.message ?? undefined,
+        createdAt: e.createdAt.toISOString(),
+      })),
     }));
   }
 

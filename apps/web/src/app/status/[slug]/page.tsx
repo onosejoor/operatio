@@ -1,7 +1,4 @@
-import {
-  getPublicStatus,
-  getPublicStatusMetrics,
-} from "@app/features/status/api/public-status";
+import { getPublicStatus } from "@app/features/status/api/public-status";
 import { StatusPageView } from "@app/features/status/components/status-page-view";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { notFound } from "next/navigation";
@@ -38,16 +35,12 @@ export default async function StatusPage({ params }: StatusPageProps) {
   const { slug } = await params;
 
   try {
-    const [initialData, initialMetrics] = await Promise.all([
-      getPublicStatus(slug),
-      getPublicStatusMetrics(slug).catch(() => undefined),
-    ]);
+    const initialData = await getPublicStatus(slug);
 
     return (
       <StatusPageView
         slug={slug}
         initialData={initialData}
-        initialMetrics={initialMetrics}
       />
     );
   } catch {
@@ -55,7 +48,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
       <ErrorDisplay
         message="Status Page Not Found"
         url="/"
-        urlLabel="Return to Upwatch"
+        urlLabel="Return to Operatio"
         fullScreen
       />
     );

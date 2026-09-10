@@ -11,6 +11,14 @@ export enum MonitorPerformanceStatus {
   PENDING = 'PENDING',
 }
 
+export type IncidentLifecycleStatus =
+  | 'INVESTIGATING'
+  | 'IDENTIFIED'
+  | 'MONITORING'
+  | 'RESOLVED';
+
+export type IncidentSeverity = 'MINOR' | 'MAJOR' | 'CRITICAL';
+
 export interface PublicStatusPage {
   name: string;
   slug: string;
@@ -28,15 +36,33 @@ export interface PublicMonitor {
   status: MonitorPerformanceStatus;
   uptime?: number | null;
   responseTime?: number | null;
+  lastStatusCode?: number | null;
   dailyUptime?: DailyUptime[];
+}
+
+export interface PublicIncidentEvent {
+  type: string;
+  status?: IncidentLifecycleStatus;
+  message?: string;
+  createdAt: string;
 }
 
 export interface PublicIncident {
   id: string;
+  /** Simple binary: 'active' | 'resolved' — for filtering */
   status: 'active' | 'resolved';
+  /** Full lifecycle status from backend */
+  incidentStatus?: IncidentLifecycleStatus;
+  title?: string;
+  severity?: IncidentSeverity;
+  publicMessage?: string;
   startedAt: string;
   resolvedAt?: string;
+  /** Duration in seconds (derived) */
   duration?: number;
+  /** Duration in milliseconds (stored by backend on resolve) */
+  durationMs?: number;
+  events?: PublicIncidentEvent[];
 }
 
 export interface PublicStatusResponse {

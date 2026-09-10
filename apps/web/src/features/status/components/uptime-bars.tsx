@@ -18,10 +18,10 @@ function barColor(pct?: number | null) {
 function getTooltipText(pct?: number | null, date?: string) {
   if (!date) return "No data";
   const formattedDate = format(new Date(date), "MMM d, yyyy");
-  if (pct === null || pct === undefined) return `${formattedDate}: No checks logged`;
+  if (pct === null || pct === undefined) return `${formattedDate}: No data`;
   if (pct >= 99.5) return `${formattedDate}: ${pct.toFixed(2)}% uptime (Operational)`;
   if (pct >= 95) return `${formattedDate}: ${pct.toFixed(2)}% uptime (Degraded)`;
-  return `${formattedDate}: ${pct.toFixed(2)}% uptime (Outage detected)`;
+  return `${formattedDate}: ${pct.toFixed(2)}% uptime (Outage)`;
 }
 
 export function UptimeBars({
@@ -66,7 +66,7 @@ export function UptimeBars({
       {/* Axis metadata */}
       <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
         <span>{data.length} days ago</span>
-        <span className="hidden sm:inline">Rolling 90-Day SLA Window</span>
+        <span className="hidden sm:inline">Rolling 90-Day History</span>
         <span>Today</span>
       </div>
     </div>

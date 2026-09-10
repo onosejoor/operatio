@@ -48,8 +48,29 @@ export class PublicMonitorDto {
   @ApiProperty({ example: 142, required: false, nullable: true })
   responseTime?: number | null;
 
+  @ApiProperty({ example: 200, required: false, nullable: true })
+  lastStatusCode?: number | null;
+
   @ApiProperty({ type: [DailyUptimeDto], required: false })
   dailyUptime?: DailyUptimeDto[];
+}
+
+export class PublicIncidentEventDto {
+  @ApiProperty({ enum: ['STATUS_UPDATE', 'NOTE', 'UPDATE'], example: 'STATUS_UPDATE' })
+  type!: string;
+
+  @ApiProperty({
+    enum: ['INVESTIGATING', 'IDENTIFIED', 'MONITORING', 'RESOLVED'],
+    example: 'INVESTIGATING',
+    required: false,
+  })
+  status?: string;
+
+  @ApiProperty({ example: 'Incident created due to consecutive monitor failures', required: false })
+  message?: string;
+
+  @ApiProperty({ example: '2024-01-15T10:30:00Z' })
+  createdAt!: string;
 }
 
 export class PublicIncidentDto {
@@ -59,6 +80,21 @@ export class PublicIncidentDto {
   @ApiProperty({ enum: ['active', 'resolved'], example: 'active' })
   status!: string;
 
+  @ApiProperty({
+    enum: ['INVESTIGATING', 'IDENTIFIED', 'MONITORING', 'RESOLVED'],
+    example: 'INVESTIGATING',
+  })
+  incidentStatus!: string;
+
+  @ApiProperty({ example: 'API endpoint returning 503', required: false })
+  title?: string;
+
+  @ApiProperty({ enum: ['MINOR', 'MAJOR', 'CRITICAL'], example: 'MAJOR', required: false })
+  severity?: string;
+
+  @ApiProperty({ example: 'We are investigating an issue with this monitor', required: false })
+  publicMessage?: string;
+
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
   startedAt!: string;
 
@@ -67,6 +103,12 @@ export class PublicIncidentDto {
 
   @ApiProperty({ example: 3600, required: false })
   duration?: number;
+
+  @ApiProperty({ example: 3600000, required: false })
+  durationMs?: number;
+
+  @ApiProperty({ type: [PublicIncidentEventDto] })
+  events!: PublicIncidentEventDto[];
 }
 
 export class PublicStatusResponseDto {

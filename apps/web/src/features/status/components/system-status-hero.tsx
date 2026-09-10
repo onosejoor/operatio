@@ -1,50 +1,30 @@
-import {
-  MonitorPerformanceStatus,
-  OverallStatus,
-  PublicMonitor,
-} from "../types/public-status";
+import { OverallStatus } from "../types/public-status";
 import { overallStatusConfig } from "@app/lib/status";
 import { StatusDot } from "./status-dot";
-import { Activity, Radio } from "lucide-react";
+import { Activity } from "lucide-react";
 import { Card } from "@operatio/ui/components/ui/card";
 import { Badge } from "@operatio/ui/components/ui/badge";
 
 export function SystemStatusHero({
   status,
   overallUptime,
-  monitors = [],
   lastCheckedTime,
 }: {
   status: OverallStatus;
   overallUptime?: number | null;
-  monitors?: PublicMonitor[];
   lastCheckedTime?: string;
 }) {
   const config = overallStatusConfig[status];
 
-  const affectedMonitors = monitors.filter(
-    (m) => m.status !== MonitorPerformanceStatus.UP,
-  );
-  const affectedNames =
-    affectedMonitors.length > 3
-      ? `${affectedMonitors
-          .slice(0, 2)
-          .map((m) => m.name)
-          .join(", ")} and ${affectedMonitors.length - 2} others`
-      : affectedMonitors.map((m) => m.name).join(", ");
+  let headline = "All systems operational";
+  let description = "Everything is operating normally.";
 
-  let description =
-    "All core systems and probes are operational without active disruptions.";
   if (status === OverallStatus.MAJOR_OUTAGE) {
-    description =
-      affectedMonitors.length > 0
-        ? `Critical outage affecting ${affectedNames}. Operational teams are actively mitigating.`
-        : "Multiple core infrastructure services are currently unreachable. We are investigating.";
+    headline = "Service disruption";
+    description = "One or more services are currently unavailable.";
   } else if (status === OverallStatus.DEGRADED) {
-    description =
-      affectedMonitors.length > 0
-        ? `Elevated latency or degradation affecting ${affectedNames}. Investigation in progress.`
-        : "Some subsystem monitors are reporting performance anomalies. We are investigating.";
+    headline = "Some systems are experiencing issues";
+    description = "Some services are currently operating below normal performance.";
   }
 
   const isHealthy = status === OverallStatus.OPERATIONAL;
@@ -58,30 +38,14 @@ export function SystemStatusHero({
 
   return (
     <div className="pt-8 pb-10 border-b border-border/40">
-      {/* Top Technical Metadata Row */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono tracking-wider text-muted-foreground uppercase">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-status-operational" />
-          <span className="font-semibold text-foreground">Global Cluster</span>
-          <span className="text-border">/</span>
-          <span>Edge Monitored</span>
+      {/* Top Status Bar with Timestamp */}
+      {lastCheckedTime && (
+        <div className="mb-4 flex items-center justify-end text-[11px] font-mono text-muted-foreground">
+          <span>Updated {lastCheckedTime}</span>
         </div>
+      )}
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Radio className="h-3 w-3 text-status-operational animate-pulse" />
-            <span>Live Telemetry</span>
-          </div>
-          {lastCheckedTime && (
-            <>
-              <span className="text-border">·</span>
-              <span>Updated {lastCheckedTime}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Main Operational Hero Card / Banner */}
+      {/* Main Operational Hero Card */}
       <Card
         className={`relative overflow-hidden rounded-xl border p-6 sm:p-8 transition-all shadow-sm ${
           isHealthy
@@ -106,11 +70,7 @@ export function SystemStatusHero({
 
             {/* Headline */}
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
-              {isHealthy
-                ? "All Core Systems Operational"
-                : isMajor
-                  ? "Major Operational Outage"
-                  : "Partial Subsystem Degradation"}
+              {headline}
             </h1>
 
             {/* Descriptive Summary */}
@@ -119,19 +79,21 @@ export function SystemStatusHero({
             </p>
           </div>
 
-          {/* Right Metric: 90-Day Rolling Reliability */}
-          <div className="shrink-0 flex flex-col md:items-end justify-center rounded-lg border border-border/40 bg-background/60 p-4 backdrop-blur-xs shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <Activity className="h-3.5 w-3.5 text-foreground/70" />
-              <span className="font-medium">90-Day Reliability</span>
+          {/* Right Metric: 90-Day Rolling Uptime (only when provided by backend) */}
+          {overallUptime != null && (
+            <div className="shrink-0 flex flex-col md:items-end justify-center rounded-lg border border-border/40 bg-background/60 p-4 backdrop-blur-xs shadow-2xs">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                <Activity className="h-3.5 w-3.5 text-foreground/70" />
+                <span className="font-medium">90-Day Uptime</span>
+              </div>
+              <div className="font-mono text-3xl font-bold tracking-tight text-foreground">
+                {overallUptime.toFixed(2)}%
+              </div>
+              <span className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                Rolling 90-day window
+              </span>
             </div>
-            <div className="font-mono text-3xl font-bold tracking-tight text-foreground">
-              {overallUptime != null ? `${overallUptime.toFixed(2)}%` : "—"}
-            </div>
-            <span className="text-[11px] font-mono text-muted-foreground mt-0.5">
-              Across all configured probes
-            </span>
-          </div>
+          )}
         </div>
       </Card>
     </div>

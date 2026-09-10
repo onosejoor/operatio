@@ -15,7 +15,6 @@ interface PublicStatusHeaderProps {
     logo?: string;
   };
   overallStatus: OverallStatus;
-  countdown: number;
   isRefreshing: boolean;
   onRefresh: () => void;
   onOpenSubscribe: () => void;
@@ -24,7 +23,6 @@ interface PublicStatusHeaderProps {
 export function PublicStatusHeader({
   statusPage,
   overallStatus,
-  countdown,
   isRefreshing,
   onRefresh,
   onOpenSubscribe,
@@ -33,8 +31,8 @@ export function PublicStatusHeader({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-md transition-all">
-      <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
-        {/* Left: Brand Identity & Infrastructure Indicator */}
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+        {/* Left: Brand Identity */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
             {statusPage.logo ? (
@@ -62,36 +60,19 @@ export function PublicStatusHeader({
                   Status
                 </Badge>
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground/80 mt-1">
-                Edge Telemetry Surface
-              </span>
+              {statusPage.description ? (
+                <span className="text-[11px] text-muted-foreground/80 mt-1 line-clamp-1">
+                  {statusPage.description}
+                </span>
+              ) : null}
             </div>
           </div>
-
-          <div className="hidden sm:flex h-4 w-px bg-border/60 mx-1" />
-
-          {/* Operational Beacon Pill */}
-          {/* <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-2.5 py-1 text-xs font-medium shadow-2xs">
-            <StatusDot
-              className={config.dotClass}
-              pulse={overallStatus === OverallStatus.MAJOR_OUTAGE}
-            />
-            <span className={`text-[11px] font-medium ${config.textClass}`}>
-              {config.label}
-            </span>
-          </div> */}
         </div>
 
-        {/* Center: In-Page Observability Jumps */}
+        {/* Center: In-Page Navigation */}
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/40 bg-muted/20 p-1 text-xs font-medium text-muted-foreground">
           <a
-            href="#telemetry"
-            className="rounded-full px-3 py-1 transition-colors hover:text-foreground hover:bg-background/80"
-          >
-            Telemetry
-          </a>
-          <a
-            href="#systems"
+            href="#services"
             className="rounded-full px-3 py-1 transition-colors hover:text-foreground hover:bg-background/80"
           >
             Services
@@ -106,20 +87,21 @@ export function PublicStatusHeader({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Live countdown pill */}
+          {/* Refresh button */}
           <Button
             type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
             variant="ghost"
-            title="Trigger instant data re-sync"
+            size="sm"
+            className="h-8 gap-1.5 rounded-lg border border-border/40 text-xs font-medium"
+            title="Refresh status data"
           >
             <RefreshCw
-              className={`h-3 w-3 ${isRefreshing ? "animate-spin text-foreground" : "opacity-70"}`}
+              className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-foreground" : "text-muted-foreground"}`}
             />
-            <span className="hidden sm:inline text-[11px]">Sync in</span>
-            <span className="tabular-nums font-semibold text-foreground text-[11px]">
-              {countdown}s
+            <span className="hidden sm:inline text-[11px] text-muted-foreground">
+              {isRefreshing ? "Refreshing..." : "Refresh"}
             </span>
           </Button>
 
