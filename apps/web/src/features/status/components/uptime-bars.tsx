@@ -6,22 +6,55 @@ import {
   TooltipTrigger,
 } from "@operatio/ui/components/tooltip";
 import { cn } from "@operatio/ui/lib/utils";
-import { format } from "date-fns";
+import { format, formatDistanceStrict } from "date-fns";
 
-function barColor(pct?: number | null) {
+function barColor(day: DailyUptime) {
+  const pct = day.uptimePercentage;
   if (pct === null || pct === undefined) return "bg-muted/40";
-  if (pct >= 99.5) return "bg-status-operational";
-  if (pct >= 95) return "bg-status-degraded";
+
+  // Strict semantics: if there was any failure, even for a minute, it must not be green
+  const hasFailures =
+    (day.failureCount && day.failureCount > 0) ||
+    (day.downDurationMinutes && day.downDurationMinutes > 0) ||
+    pct < 100;
+  if (!hasFailures) {
+    return "bg-status-operational";
+  }
+
+  // If degraded or minor outage
+  if (pct >= 95) {
+    return "bg-status-degraded";
+  }
   return "bg-status-outage";
 }
 
-function getTooltipText(pct?: number | null, date?: string) {
-  if (!date) return "No data";
-  const formattedDate = format(new Date(date), "MMM d, yyyy");
-  if (pct === null || pct === undefined) return `${formattedDate}: No data`;
-  if (pct >= 99.5) return `${formattedDate}: ${pct.toFixed(2)}% uptime (Operational)`;
-  if (pct >= 95) return `${formattedDate}: ${pct.toFixed(2)}% uptime (Degraded)`;
-  return `${formattedDate}: ${pct.toFixed(2)}% uptime (Outage)`;
+function getTooltipText(day: DailyUptime) {
+  if (!day.date) return "No data";
+  const dateObj = new Date(day.date);
+  const formattedDate = format(dateObj, "MMM d, yyyy");
+  const isToday = new Date().toISOString().split("T")[0] === day.date;
+  const datePrefix = isToday ? `${formattedDate} (Today)` : formattedDate;
+  const pct = day.uptimePercentage;
+  if (pct === null || pct === undefined) return `${datePrefix}: No data`;
+
+  const hasFailures =
+    (day.failureCount && day.failureCount > 0) ||
+    (day.downDurationMinutes && day.downDurationMinutes > 0) ||
+    pct < 100;
+
+  if (!hasFailures) {
+    return `${datePrefix}: 100% uptime (Operational)`;
+  }
+
+  // Calculate down minutes
+  const downMins =
+    day.downDurationMinutes != null && day.downDurationMinutes > 0
+      ? day.downDurationMinutes
+      : Math.max(1, Math.round(((100 - pct) / 100) * 1440));
+
+  const distance = formatDistanceStrict(0, downMins * 60 * 1000);
+  const statusLabel = pct >= 95 ? "Degraded" : "Outage";
+  return `${datePrefix}: ${pct.toFixed(2)}% uptime (${statusLabel} \n Down for ${distance})`;
 }
 
 export function UptimeBars({
@@ -36,9 +69,9 @@ export function UptimeBars({
   return (
     <div className={cn("w-full space-y-2", className)}>
       <TooltipProvider delay={50}>
-        <div className="flex h-7 w-full items-end gap-[2px] overflow-hidden rounded-sm">
+        <div className="flex h-7 w-full items-end gap-0.5 overflow-hidden rounded-sm">
           {data.map((day) => {
-            const tooltipText = getTooltipText(day.uptimePercentage, day.date);
+            const tooltipText = getTooltipText(day);
 
             return (
               <Tooltip key={day.date}>
@@ -47,14 +80,17 @@ export function UptimeBars({
                     <div
                       className={cn(
                         "h-full flex-1 rounded-[1.5px] transition-all hover:scale-y-110 hover:opacity-100 opacity-85 cursor-pointer",
-                        barColor(day.uptimePercentage),
+                        barColor(day),
                       )}
                       role="img"
                       aria-label={tooltipText}
                     />
                   }
                 />
-                <TooltipContent side="top" className="font-mono text-[11px] shadow-lg">
+                <TooltipContent
+                  side="top"
+                  className="font-mono shadow-lg whitespace-break-spaces font-medium"
+                >
                   {tooltipText}
                 </TooltipContent>
               </Tooltip>

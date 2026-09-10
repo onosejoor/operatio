@@ -29,6 +29,8 @@ export interface PublicStatusPage {
 export interface DailyUptime {
   date: string;
   uptimePercentage?: number | null;
+  downDurationMinutes?: number;
+  failureCount?: number;
 }
 
 export interface PublicMonitor {

@@ -24,7 +24,8 @@ export function SystemStatusHero({
     description = "One or more services are currently unavailable.";
   } else if (status === OverallStatus.DEGRADED) {
     headline = "Some systems are experiencing issues";
-    description = "Some services are currently operating below normal performance.";
+    description =
+      "Some services are currently operating below normal performance.";
   }
 
   const isHealthy = status === OverallStatus.OPERATIONAL;
@@ -49,10 +50,10 @@ export function SystemStatusHero({
       <Card
         className={`relative overflow-hidden rounded-xl border p-6 sm:p-8 transition-all shadow-sm ${
           isHealthy
-            ? "border-status-operational/25 bg-status-operational/3"
+            ? "bg-status-operational/3"
             : isMajor
-              ? "border-status-outage/30 bg-status-outage/4"
-              : "border-status-degraded/30 bg-status-degraded/4"
+              ? "bg-status-outage/4"
+              : "bg-status-degraded/4"
         }`}
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">

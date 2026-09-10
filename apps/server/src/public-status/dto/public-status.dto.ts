@@ -36,6 +36,12 @@ export class DailyUptimeDto {
 
   @ApiProperty({ example: 99.5, required: false })
   uptimePercentage?: number | null;
+
+  @ApiProperty({ example: 5, required: false })
+  downDurationMinutes?: number;
+
+  @ApiProperty({ example: 1, required: false })
+  failureCount?: number;
 }
 
 export class PublicMonitorDto {

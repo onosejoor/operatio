@@ -6,10 +6,14 @@ import {
   usePublicStatus,
   statusKeys,
 } from "@app/features/status/hooks/use-public-status";
-import type { PublicStatusResponse } from "@app/features/status/types/public-status";
+import type {
+  PublicStatusResponse,
+  PublicMonitor,
+} from "@app/features/status/types/public-status";
 import { PublicStatusHeader } from "@app/features/status/components/public-status-header";
 import { SystemStatusHero } from "@app/features/status/components/system-status-hero";
 import { ServiceMonitorCard } from "@app/features/status/components/service-monitor-card";
+import { ServiceDetailsDialog } from "@app/features/status/components/service-details-dialog";
 import {
   ActiveIncidents,
   IncidentHistory,
@@ -23,12 +27,12 @@ interface StatusPageViewProps {
   initialData: PublicStatusResponse;
 }
 
-export function StatusPageView({
-  slug,
-  initialData,
-}: StatusPageViewProps) {
+export function StatusPageView({ slug, initialData }: StatusPageViewProps) {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isSubscribeOpen, setIsSubscribeOpen] = useState<boolean>(false);
+  const [selectedMonitor, setSelectedMonitor] = useState<PublicMonitor | null>(
+    null,
+  );
   const [lastCheckedTime, setLastCheckedTime] = useState<string>("just now");
 
   const queryClient = useQueryClient();
@@ -40,7 +44,9 @@ export function StatusPageView({
     if (!slug || isRefreshing) return;
     setIsRefreshing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: statusKeys.public(slug) });
+      await queryClient.invalidateQueries({
+        queryKey: statusKeys.public(slug),
+      });
       setLastCheckedTime("just now");
     } finally {
       setIsRefreshing(false);
@@ -70,8 +76,28 @@ export function StatusPageView({
           lastCheckedTime={lastCheckedTime}
         />
 
+        {/* Active Incident Banner — compact alert that scrolls to full incident list */}
+        {activeIncidents.length > 0 && (
+          <a
+            href="#incidents"
+            className="mt-8 flex items-center justify-between gap-3 rounded-lg  bg-status-outage/5 px-4 py-3 transition-colors hover:bg-status-outage/10 group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <AlertCircle className="h-4 w-4 shrink-0 text-status-outage" />
+              <span className="font-mono text-xs font-semibold text-status-outage">
+                {activeIncidents.length === 1
+                  ? "1 active incident affecting your services"
+                  : `${activeIncidents.length} active incidents affecting your services`}
+              </span>
+            </div>
+            <span className="font-mono text-[11px] text-status-outage/80 shrink-0 group-hover:underline">
+              View incidents ↓
+            </span>
+          </a>
+        )}
+
         {/* Services Section */}
-        <section id="services" className="pt-12">
+        <section id="services" className="pt-10">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Server className="h-4 w-4 text-muted-foreground" />
@@ -88,7 +114,11 @@ export function StatusPageView({
           <div className="space-y-3">
             {data.monitors.length > 0 ? (
               data.monitors.map((monitor) => (
-                <ServiceMonitorCard key={monitor.name} monitor={monitor} />
+                <ServiceMonitorCard
+                  key={monitor.name}
+                  monitor={monitor}
+                  onViewDetails={(m) => setSelectedMonitor(m)}
+                />
               ))
             ) : (
               <div className="rounded-xl border border-border/40 bg-card/40 p-6 text-center text-xs font-mono text-muted-foreground">
@@ -98,35 +128,23 @@ export function StatusPageView({
           </div>
         </section>
 
-        {/* Active Incidents Section (Prominently shown when active incidents exist) */}
-        {activeIncidents.length > 0 && (
-          <section id="active-incidents" className="pt-12">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-status-outage" />
-                <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-status-outage">
-                  Active Incidents
-                </h2>
-              </div>
-              <span className="font-mono text-[11px] text-status-outage">
-                {activeIncidents.length} active
-              </span>
-            </div>
-
-            <ActiveIncidents incidents={data.incidents} />
-          </section>
-        )}
-
-        {/* Incident History Section */}
+        {/* Incidents Section — active first, then history */}
         <section id="incidents" className="pt-12">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                Incident History
+                Incidents
               </h2>
             </div>
           </div>
+
+          {/* Active incidents rendered first so the anchor scroll lands here */}
+          {activeIncidents.length > 0 && (
+            <div className="mb-8">
+              <ActiveIncidents incidents={data.incidents} />
+            </div>
+          )}
 
           <IncidentHistory incidents={data.incidents} />
         </section>
@@ -134,6 +152,13 @@ export function StatusPageView({
 
       {/* Footer */}
       <PublicStatusFooter statusPageName={data.statusPage.name} />
+
+      {/* Progressive Disclosure Dialog: Service Details */}
+      <ServiceDetailsDialog
+        monitor={selectedMonitor}
+        isOpen={Boolean(selectedMonitor)}
+        onClose={() => setSelectedMonitor(null)}
+      />
 
       {/* Subscribe Dialog */}
       <SubscribeDialog

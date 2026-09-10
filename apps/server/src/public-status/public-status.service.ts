@@ -86,6 +86,7 @@ export class PublicStatusService {
             isPublic: true,
             isActive: true,
             lastStatusCode: true,
+            interval: true,
           },
         },
       },
@@ -103,7 +104,7 @@ export class PublicStatusService {
       const [uptime, responseTime, dailyUptime] = await Promise.all([
         this.calculateUptime(monitor.id),
         this.calculateAverageResponseTime(monitor.id),
-        this.calculateDailyUptime(monitor.id),
+        this.calculateDailyUptime(monitor.id, monitor.interval),
       ]);
 
       const performanceStatus = this.calculatePerformanceStatus(
@@ -345,6 +346,7 @@ export class PublicStatusService {
 
   private async calculateDailyUptime(
     monitorId: string,
+    monitorIntervalSeconds: number = 60,
   ): Promise<DailyUptimeDto[]> {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
@@ -367,18 +369,20 @@ export class PublicStatusService {
 
     // Group checks by day and calculate uptime
     const dailyUptime: DailyUptimeDto[] = [];
-    const dailyChecks = new Map<string, { total: number; up: number }>();
+    const dailyChecks = new Map<
+      string,
+      { total: number; up: number; failures: number }
+    >();
 
-    // Initialize all 90 days
+    // Initialize all 90 days ending at today (in UTC)
+    const now = new Date();
     for (let i = 89; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
-      const dateKey = date.toISOString().split('T')[0];
-      dailyChecks.set(dateKey, { total: 0, up: 0 });
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+      const dateKey = d.toISOString().split('T')[0];
+      dailyChecks.set(dateKey, { total: 0, up: 0, failures: 0 });
     }
 
-    // Aggregate checks by day
+    // Aggregate checks by day (check.checkedAt is stored as UTC Date)
     for (const check of allChecks) {
       const dateKey = check.checkedAt.toISOString().split('T')[0];
       const dayData = dailyChecks.get(dateKey);
@@ -386,27 +390,41 @@ export class PublicStatusService {
         dayData.total++;
         if (check.status === MonitorStatus.UP) {
           dayData.up++;
+        } else {
+          dayData.failures++;
         }
       }
     }
 
-    // Convert to array format
+    // Convert to array format in chronological order (oldest to today)
     for (let i = 89; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
-      const dateKey = date.toISOString().split('T')[0];
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+      const dateKey = d.toISOString().split('T')[0];
       const dayData = dailyChecks.get(dateKey);
 
       let uptimePercentage: number | null = null;
+      let downDurationMinutes = 0;
+      let failureCount = 0;
+
       if (dayData && dayData.total > 0) {
         uptimePercentage =
           Math.round((dayData.up / dayData.total) * 10000) / 100;
+        failureCount = dayData.failures;
+
+        // Approximate down duration in minutes based on failure count and check interval
+        if (failureCount > 0) {
+          downDurationMinutes = Math.max(
+            1,
+            Math.round((failureCount * monitorIntervalSeconds) / 60),
+          );
+        }
       }
 
       dailyUptime.push({
         date: dateKey,
         uptimePercentage,
+        downDurationMinutes: failureCount > 0 ? downDurationMinutes : 0,
+        failureCount,
       });
     }
 

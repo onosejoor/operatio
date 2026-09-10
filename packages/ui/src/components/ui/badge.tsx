@@ -3,25 +3,48 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@operatio/ui/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  [
+    "inline-flex items-center gap-1.5 rounded-full border",
+    "px-2.5 py-1",
+    "text-[11px] leading-none font-medium tracking-wide",
+    "whitespace-nowrap",
+    "transition-colors",
+    "focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none",
+  ],
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        default: "border-transparent bg-primary text-primary-foreground",
+
+        secondary: "border-transparent bg-secondary text-secondary-foreground",
+
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
-        operational:
-          "border-transparent bg-status-operational text-status-operational-foreground shadow hover:bg-status-operational/80",
-        degraded:
-          "border-transparent bg-status-degraded text-status-degraded-foreground shadow hover:bg-status-degraded/80",
-        outage:
-          "border-transparent bg-status-outage text-status-outage-foreground shadow hover:bg-status-outage/80",
+          "text-destructive-foreground border-transparent bg-destructive",
+
+        outline: "border-border bg-background text-foreground",
+
+        operational: [
+          "border-status-operational/20",
+          "bg-status-operational/10",
+          "text-status-operational",
+        ].join(" "),
+
+        degraded: [
+          "border-status-degraded/25",
+          "bg-status-degraded/10",
+          "text-status-degraded",
+        ].join(" "),
+
+        outage: [
+          "border-status-outage/20",
+          "bg-status-outage/10",
+          "text-status-outage",
+        ].join(" "),
+
+        pending: "border-transparent bg-primary text-primary-foreground",
       },
     },
+
     defaultVariants: {
       variant: "default",
     },
@@ -29,7 +52,8 @@ const badgeVariants = cva(
 )
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {

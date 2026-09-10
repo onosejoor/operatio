@@ -85,6 +85,46 @@ export class IncidentConsumer {
     await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
   }
 
+  @EventHandler(EventType.INCIDENT_CREATED)
+  async handleIncidentCreated(message: EventMessage): Promise<void> {
+    const claimed = await this.outboxRepository.tryClaimProcessing(
+      message.idempotencyKey,
+    );
+    if (!claimed) {
+      this.logger.debug(
+        `Incident created event already claimed/processed: ${message.idempotencyKey}`,
+      );
+      return;
+    }
+
+    const payload: IncidentCreatedPayload = JSON.parse(message.payload);
+    this.logger.log(
+      `Incident created event received: ${payload.incidentId} for monitor ${payload.monitorId}`,
+    );
+
+    await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
+  }
+
+  @EventHandler(EventType.INCIDENT_RESOLVED)
+  async handleIncidentResolved(message: EventMessage): Promise<void> {
+    const claimed = await this.outboxRepository.tryClaimProcessing(
+      message.idempotencyKey,
+    );
+    if (!claimed) {
+      this.logger.debug(
+        `Incident resolved event already claimed/processed: ${message.idempotencyKey}`,
+      );
+      return;
+    }
+
+    const payload: IncidentResolvedPayload = JSON.parse(message.payload);
+    this.logger.log(
+      `Incident resolved event received: ${payload.incidentId} for monitor ${payload.monitorId}`,
+    );
+
+    await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
+  }
+
   private async handleMonitorDown(
     monitorId: string,
     organizationId: string,
@@ -115,6 +155,7 @@ export class IncidentConsumer {
           },
           select: {
             consecutiveFailures: true,
+            name: true,
           },
         });
 
@@ -157,8 +198,9 @@ export class IncidentConsumer {
             data: {
               monitorId,
               organizationId,
+              resolvedAt: null,
               publicId,
-              title: `Monitor ${monitorId} is down`,
+              title: `${monitor.name} monitor is down`,
               status: IncidentStatus.INVESTIGATING,
               severity: IncidentSeverity.MAJOR,
               detectedAt: checkedAt,
@@ -344,46 +386,6 @@ export class IncidentConsumer {
     throw new Error(
       `Failed to generate unique public ID after ${MAX_RETRIES} attempts`,
     );
-  }
-
-  @EventHandler(EventType.INCIDENT_CREATED)
-  async handleIncidentCreated(message: EventMessage): Promise<void> {
-    const claimed = await this.outboxRepository.tryClaimProcessing(
-      message.idempotencyKey,
-    );
-    if (!claimed) {
-      this.logger.debug(
-        `Incident created event already claimed/processed: ${message.idempotencyKey}`,
-      );
-      return;
-    }
-
-    const payload: IncidentCreatedPayload = JSON.parse(message.payload);
-    this.logger.log(
-      `Incident created event received: ${payload.incidentId} for monitor ${payload.monitorId}`,
-    );
-
-    await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
-  }
-
-  @EventHandler(EventType.INCIDENT_RESOLVED)
-  async handleIncidentResolved(message: EventMessage): Promise<void> {
-    const claimed = await this.outboxRepository.tryClaimProcessing(
-      message.idempotencyKey,
-    );
-    if (!claimed) {
-      this.logger.debug(
-        `Incident resolved event already claimed/processed: ${message.idempotencyKey}`,
-      );
-      return;
-    }
-
-    const payload: IncidentResolvedPayload = JSON.parse(message.payload);
-    this.logger.log(
-      `Incident resolved event received: ${payload.incidentId} for monitor ${payload.monitorId}`,
-    );
-
-    await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
   }
 
   private canTransitionTo(

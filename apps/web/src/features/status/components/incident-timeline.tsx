@@ -5,13 +5,11 @@ import {
 } from "../types/public-status";
 import { formatDuration } from "@app/lib/status";
 import { StatusDot } from "./status-dot";
-import { UptimeBars } from "./uptime-bars";
 import { format } from "date-fns";
 import {
   CheckCircle2,
   Clock,
   ArrowRight,
-  AlertTriangle,
   Search,
   Eye,
   Activity,
@@ -29,7 +27,7 @@ function severityVariant(severity?: string) {
     case "MAJOR":
       return "degraded" as const;
     case "MINOR":
-      return "outline" as const;
+      return "pending" as const;
     default:
       return "degraded" as const;
   }
@@ -37,7 +35,7 @@ function severityVariant(severity?: string) {
 
 function severityLabel(severity?: string) {
   if (!severity) return null;
-  return severity.charAt(0) + severity.slice(1).toLowerCase(); // "Major"
+  return severity.charAt(0) + severity.slice(1).toLowerCase(); // "Major", "Critical", etc.
 }
 
 function lifecycleLabel(status?: IncidentLifecycleStatus | string) {
@@ -101,12 +99,12 @@ function IncidentEventLog({ events }: { events: PublicIncidentEvent[] }) {
                 )}
               />
               {i < events.length - 1 && (
-                <div className="w-px flex-1 bg-border/30 min-h-[12px]" />
+                <div className="w-px flex-1 bg-border/30 min-h-3.5" />
               )}
             </div>
 
             {/* Event content */}
-            <div className="pb-1 min-w-0">
+            <div className="pb-1 min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 {event.status && (
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
@@ -151,51 +149,56 @@ export function ActiveIncidents({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {active.map((incident) => {
         const shortId =
           incident.publicId || incident.id.slice(-6).toUpperCase();
-
         const startedDate = new Date(incident.startedAt);
         const currentStatus = incident.incidentStatus ?? "INVESTIGATING";
         const sev = severityLabel(incident.severity);
 
-        console.log({ currentStatus, sev, incident });
-
         return (
           <Card
             key={incident.id}
-            className="rounded-xl border border-status-outage/40 bg-status-outage/4 p-5 sm:p-6 transition-all shadow-2xs"
+            className="rounded-xl bg-status-outage/4 p-5 sm:p-6 transition-all shadow-2xs"
           >
             {/* Header row */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <StatusDot className="bg-status-outage" pulse />
-                <span className="font-mono text-xs font-semibold text-foreground">
-                  Incident #{shortId}
-                </span>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <StatusDot className="bg-status-outage" pulse />
+                  <span className="font-mono text-xs font-semibold text-foreground">
+                    Incident #{shortId}
+                  </span>
 
-                {/* Lifecycle status — real data */}
-                <Badge
-                  variant="outage"
-                  className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 flex items-center gap-1"
-                >
-                  {lifecycleIcon(currentStatus)}
-                  {lifecycleLabel(currentStatus)}
-                </Badge>
-
-                {/* Severity badge — real data */}
-                {sev && (
+                  {/* Lifecycle status */}
                   <Badge
-                    variant={severityVariant(incident.severity)}
-                    className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5"
+                    variant="outage"
+                    className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 flex items-center gap-1"
                   >
-                    {sev}
+                    {lifecycleIcon(currentStatus)}
+                    {lifecycleLabel(currentStatus)}
                   </Badge>
+
+                  {/* Severity badge */}
+                  {sev && (
+                    <Badge
+                      variant={severityVariant(incident.severity)}
+                      className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5"
+                    >
+                      {sev}
+                    </Badge>
+                  )}
+                </div>
+
+                {incident.title && (
+                  <h3 className="text-base font-semibold text-foreground pt-1">
+                    {incident.title}
+                  </h3>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground self-start sm:self-auto">
                 <Clock className="h-3.5 w-3.5 text-status-outage" />
                 <span>
                   Started {format(startedDate, "HH:mm")} UTC (
@@ -204,9 +207,9 @@ export function ActiveIncidents({
               </div>
             </div>
 
-            {/* Public message — real data */}
+            {/* Public message */}
             {incident.publicMessage && (
-              <p className="mt-3 text-xs text-muted-foreground leading-relaxed border-t border-border/30 pt-3">
+              <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed border-t border-border/30 pt-3">
                 {incident.publicMessage}
               </p>
             )}
@@ -253,7 +256,7 @@ export function IncidentHistory({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {sortedDates.map((date) => {
         const dayIncidents = incidentsByDate.get(date)!;
         const sortedDayIncidents = [...dayIncidents].sort(
@@ -280,7 +283,8 @@ export function IncidentHistory({
             {/* Incidents List */}
             <div className="space-y-4">
               {sortedDayIncidents.map((incident) => {
-                const shortId = incident.id.slice(-6).toUpperCase();
+                const shortId =
+                  incident.publicId || incident.id.slice(-6).toUpperCase();
                 const startDate = new Date(incident.startedAt);
                 const resolvedDate = incident.resolvedAt
                   ? new Date(incident.resolvedAt)
@@ -302,28 +306,36 @@ export function IncidentHistory({
                   >
                     {/* Incident header */}
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="font-mono text-xs font-semibold text-foreground">
-                          Incident #{shortId}
-                        </span>
-                        <Badge
-                          variant="operational"
-                          className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5"
-                        >
-                          Resolved
-                        </Badge>
-                        {sev && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className="font-mono text-xs font-semibold text-foreground">
+                            Incident #{shortId}
+                          </span>
                           <Badge
-                            variant={severityVariant(incident.severity)}
+                            variant="operational"
                             className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5"
                           >
-                            {sev}
+                            Resolved
                           </Badge>
+                          {sev && (
+                            <Badge
+                              variant={severityVariant(incident.severity)}
+                              className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5"
+                            >
+                              {sev}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {incident.title && (
+                          <h4 className="text-sm font-medium text-foreground pt-0.5">
+                            {incident.title}
+                          </h4>
                         )}
                       </div>
 
                       {/* Timestamps & Duration */}
-                      <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground self-start sm:self-auto">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
                         <span>{format(startDate, "HH:mm")}</span>
                         {resolvedDate && (
