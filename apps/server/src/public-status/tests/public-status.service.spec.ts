@@ -182,12 +182,12 @@ describe('PublicStatusService', () => {
       prisma.incident.findMany.mockResolvedValue([
         {
           id: 'incident-1',
-          startedAt: new Date('2024-01-15T10:30:00Z'),
+          detectedAt: new Date('2024-01-15T10:30:00Z'),
           resolvedAt: null,
         },
         {
           id: 'incident-2',
-          startedAt: new Date('2024-01-14T10:30:00Z'),
+          detectedAt: new Date('2024-01-14T10:30:00Z'),
           resolvedAt: new Date('2024-01-14T11:30:00Z'),
         },
       ]);
@@ -216,7 +216,7 @@ describe('PublicStatusService', () => {
       prisma.incident.findMany.mockResolvedValue([
         {
           id: 'incident-1',
-          startedAt: new Date('2024-01-15T10:30:00Z'),
+          detectedAt: new Date('2024-01-15T10:30:00Z'),
           resolvedAt: null,
         },
       ]);
@@ -229,10 +229,10 @@ describe('PublicStatusService', () => {
         },
         select: {
           id: true,
-          startedAt: true,
+          detectedAt: true,
           resolvedAt: true,
         },
-        orderBy: { startedAt: 'desc' },
+        orderBy: { detectedAt: 'desc' },
         take: 50,
       });
     });
@@ -541,7 +541,7 @@ describe('PublicStatusService', () => {
       prisma.incident.findMany.mockResolvedValue([
         {
           id: 'incident-1',
-          startedAt: new Date('2024-01-15T10:30:00Z'),
+          detectedAt: new Date('2024-01-15T10:30:00Z'),
           resolvedAt: null,
         },
       ]);
