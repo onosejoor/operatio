@@ -13,6 +13,60 @@ enum MonitorStatus {
   DOWN
 }
 
+enum AssertionType {
+  STATUS_CODE
+  RESPONSE_TIME
+  HEADER
+  BODY_CONTAINS
+}
+
+enum AssertionOperator {
+  EQUALS
+  NOT_EQUALS
+  GREATER_THAN
+  LESS_THAN
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN_OR_EQUAL
+  CONTAINS
+}
+
+enum CheckExecutionStatus {
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
+
+enum FailureCode {
+  HTTP_ERROR
+  TIMEOUT
+  DNS_ERROR
+  CONNECTION_REFUSED
+  CONNECTION_RESET
+  TLS_ERROR
+  NETWORK_ERROR
+  ASSERTION_FAILED
+  UNKNOWN_ERROR
+}
+
+enum IncidentStatus {
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+}
+
+enum IncidentSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum IncidentEventType {
+  STATUS_UPDATE
+  NOTE
+  UPDATE
+}
+
 enum MembershipRole {
   OWNER
   MEMBER
@@ -50,11 +104,11 @@ model User {
 }
 
 model Organization {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  slug        String       @unique
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   memberships Membership[]
   monitors    Monitor[]
@@ -80,26 +134,29 @@ model Membership {
 }
 
 model Monitor {
-  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
-  organizationId     String        @db.ObjectId
-  name               String
-  url                String
-  interval           Int           @default(60)
-  timeout            Int           @default(10000)
-  status             MonitorStatus @default(PENDING)
-  isActive           Boolean       @default(true)
-  isPublic           Boolean       @default(true)
-  lastCheckedAt      DateTime?
-  lastStatusCode     Int?
-  lastResponseTimeMs Int?
-  nextCheckAt        DateTime?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                  String        @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId      String        @db.ObjectId
+  name                String
+  url                 String
+  interval            Int           @default(60)
+  timeout             Int           @default(10000)
+  status              MonitorStatus @default(PENDING)
+  isActive            Boolean       @default(true)
+  isPublic            Boolean       @default(true)
+  consecutiveFailures Int           @default(0)
+  hasOpenIncident     Boolean       @default(false)
+  lastCheckedAt       DateTime?
+  lastStatusCode      Int?
+  lastResponseTimeMs  Int?
+  nextCheckAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   checks             MonitorCheck[]
   incidents          Incident[]
   statusPageMonitors StatusPageMonitor[]
+  assertions         Assertion[]
 
   @@index([organizationId])
   @@index([isActive, nextCheckAt])
@@ -107,35 +164,133 @@ model Monitor {
 }
 
 model MonitorCheck {
-  id             String        @id @default(auto()) @map("_id") @db.ObjectId
-  monitorId      String        @db.ObjectId
-  status         MonitorStatus
-  statusCode     Int?
-  responseTimeMs Int
-  error          String?
-  checkedAt      DateTime      @default(now())
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  monitorId       String               @db.ObjectId
+  organizationId  String               @db.ObjectId
+  status          MonitorStatus
+  executionStatus CheckExecutionStatus @default(SUCCESS)
+  statusCode      Int?
+  responseTimeMs  Int
+  error           String?
+  failureCode     FailureCode?
+  startedAt       DateTime             @default(now())
+  completedAt     DateTime             @default(now())
+  durationMs      Int?
+  attempt         Int                  @default(1)
+  idempotencyKey  String?              @unique
+  checkedAt       DateTime             @default(now())
 
-  monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  monitor          Monitor           @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  httpTelemetry    HttpTelemetry?
+  assertionResults AssertionResult[]
 
   @@index([monitorId, checkedAt])
+  @@index([organizationId])
   @@map("monitor_checks")
 }
 
-model Incident {
+model HttpTelemetry {
+  id                         String   @id @default(auto()) @map("_id") @db.ObjectId
+  monitorCheckId             String   @unique @db.ObjectId
+  statusCode                 Int?
+  statusText                 String?
+  responseTimeMs             Int
+  dnsMs                      Int?
+  tcpMs                      Int?
+  tlsMs                      Int?
+  requestMs                  Int?
+  ttfbMs                     Int?
+  downloadMs                 Int?
+  responseSizeBytesEstimated Int?
+  protocol                   String?
+  redirected                 Boolean?
+  redirectCount              Int?
+  finalUrl                   String?
+  createdAt                  DateTime @default(now())
+
+  monitorCheck MonitorCheck @relation(fields: [monitorCheckId], references: [id], onDelete: Cascade)
+
+  @@map("http_telemetry")
+}
+
+model Assertion {
+  id        String             @id @default(auto()) @map("_id") @db.ObjectId
+  monitorId String             @db.ObjectId
+  type      AssertionType
+  expected  String?
+  operator  AssertionOperator?
+  key       String? // For header assertions
+  isActive  Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId])
+  @@map("assertions")
+}
+
+model AssertionResult {
   id             String        @id @default(auto()) @map("_id") @db.ObjectId
-  monitorId      String        @db.ObjectId
-  organizationId String        @db.ObjectId
-  startedAt      DateTime      @default(now())
-  resolvedAt     DateTime?
+  monitorCheckId String        @db.ObjectId
+  assertionId    String        @db.ObjectId
+  type           AssertionType
+  passed         Boolean
+  expected       String?
+  actual         String?
+  message        String?
   createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
 
-  monitor       Monitor       @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  monitorCheck MonitorCheck @relation(fields: [monitorCheckId], references: [id], onDelete: Cascade)
 
-  @@index([monitorId, startedAt])
+  @@index([monitorCheckId])
+  @@index([assertionId])
+  @@map("assertion_results")
+}
+
+model Incident {
+  id             String            @id @default(auto()) @map("_id") @db.ObjectId
+  monitorId      String            @db.ObjectId
+  organizationId String            @db.ObjectId
+  publicId       String            @unique
+  title          String?
+  status         IncidentStatus    @default(INVESTIGATING)
+  severity       IncidentSeverity?
+  detectedAt     DateTime          @default(now())
+  acknowledgedAt DateTime?
+  identifiedAt   DateTime?
+  monitoringAt   DateTime?
+  resolvedAt     DateTime?
+  durationMs     Int?
+  summary        String?
+  publicMessage  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  monitor      Monitor         @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events       IncidentEvent[]
+
+  @@index([monitorId])
   @@index([organizationId])
+  @@index([status])
   @@map("incidents")
+}
+
+model IncidentEvent {
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  incidentId String            @db.ObjectId
+  type       IncidentEventType
+  status     IncidentStatus?
+  message    String?
+  metadata   String? // JSON string for additional data
+  createdAt  DateTime          @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@index([createdAt])
+  @@map("incident_events")
 }
 
 model StatusPage {
@@ -149,7 +304,7 @@ model StatusPage {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   statusPageMonitors StatusPageMonitor[]
 
   @@index([organizationId])
@@ -157,11 +312,11 @@ model StatusPage {
 }
 
 model StatusPageMonitor {
-  id           String     @id @default(auto()) @map("_id") @db.ObjectId
-  statusPageId String     @db.ObjectId
-  monitorId    String     @db.ObjectId
-  order        Int        @default(0)
-  createdAt    DateTime   @default(now())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  statusPageId String   @db.ObjectId
+  monitorId    String   @db.ObjectId
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
 
   statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
   monitor    Monitor    @relation(fields: [monitorId], references: [id], onDelete: Cascade)

@@ -8,6 +8,7 @@ import { MonitorCheckService } from './checker/monitor-check.service';
 import { MonitorsService } from './monitors.service';
 import { MonitorConsumer } from './consumers/monitor.consumer';
 import { MonitorSchedulerService } from './scheduler/monitor-scheduler.service';
+import { AssertionService } from './telemetry/assertion.service';
 
 @Module({
   imports: [OrganizationsModule, OutboxModule, ScheduleModule],
@@ -18,6 +19,7 @@ import { MonitorSchedulerService } from './scheduler/monitor-scheduler.service';
     MonitorCheckService,
     MonitorConsumer,
     MonitorSchedulerService,
+    AssertionService,
   ],
   exports: [MonitorCheckService],
 })

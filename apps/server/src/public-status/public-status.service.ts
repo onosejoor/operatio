@@ -142,21 +142,21 @@ export class PublicStatusService {
       },
       select: {
         id: true,
-        startedAt: true,
+        detectedAt: true,
         resolvedAt: true,
       },
-      orderBy: { startedAt: 'desc' },
+      orderBy: { detectedAt: 'desc' },
       take: 50,
     });
 
     return incidents.map((incident) => ({
       id: incident.id,
       status: incident.resolvedAt ? 'resolved' : 'active',
-      startedAt: incident.startedAt.toISOString(),
+      startedAt: incident.detectedAt.toISOString(),
       resolvedAt: incident.resolvedAt?.toISOString(),
       duration: incident.resolvedAt
         ? Math.floor(
-            (incident.resolvedAt.getTime() - incident.startedAt.getTime()) /
+            (incident.resolvedAt.getTime() - incident.detectedAt.getTime()) /
               1000,
           )
         : undefined,
@@ -422,10 +422,10 @@ export class PublicStatusService {
     const incidents = await this.prisma.incident.findMany({
       where: {
         monitorId: { in: monitorIds },
-        startedAt: { gte: oneHourAgo },
+        detectedAt: { gte: oneHourAgo },
       },
       select: {
-        startedAt: true,
+        detectedAt: true,
         resolvedAt: true,
       },
     });
@@ -437,7 +437,7 @@ export class PublicStatusService {
     if (resolvedIncidents.length > 0) {
       const totalDuration = resolvedIncidents.reduce(
         (sum, inc) =>
-          sum + (inc.resolvedAt!.getTime() - inc.startedAt.getTime()) / 1000,
+          sum + (inc.resolvedAt!.getTime() - inc.detectedAt.getTime()) / 1000,
         0,
       );
       averageIncidentDuration = Math.round(totalDuration / resolvedIncidents.length);

@@ -9,7 +9,7 @@ export class IncidentsService {
     id: true,
     monitorId: true,
     organizationId: true,
-    startedAt: true,
+    detectedAt: true,
     resolvedAt: true,
   };
 
@@ -34,7 +34,7 @@ export class IncidentsService {
       this.prisma.incident.findMany({
         where: { monitorId },
         select: this.selectFields,
-        orderBy: { startedAt: 'desc' },
+        orderBy: { detectedAt: 'desc' },
         skip,
         take: limit,
       }),
@@ -64,7 +64,7 @@ export class IncidentsService {
     const [incidents, total] = await Promise.all([
       this.prisma.incident.findMany({
         where: { organizationId },
-        orderBy: { startedAt: 'desc' },
+        orderBy: { detectedAt: 'desc' },
         select: this.selectFields,
         skip,
         take: limit,
