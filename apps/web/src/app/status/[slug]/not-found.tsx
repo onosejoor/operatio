@@ -1,9 +1,9 @@
-import { LoaderDisplay } from "@operatio/ui/components/loader-display";
+import { ErrorDisplay } from "@operatio/ui/components/error-display";
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-background">
-      <LoaderDisplay message="Page not found" />
+      <ErrorDisplay message="Page not found" fullScreen />
     </div>
   );
 }

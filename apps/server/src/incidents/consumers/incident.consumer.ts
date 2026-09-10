@@ -68,11 +68,7 @@ export class IncidentConsumer {
 
     const checkedAt = new Date(payload.checkedAt);
 
-    if (
-      (payload.previousStatus === MonitorStatus.UP ||
-        payload.previousStatus === MonitorStatus.PENDING) &&
-      payload.newStatus === MonitorStatus.DOWN
-    ) {
+    if (payload.newStatus === MonitorStatus.DOWN) {
       await this.handleMonitorDown(
         payload.monitorId,
         payload.organizationId,
@@ -96,6 +92,19 @@ export class IncidentConsumer {
   ): Promise<void> {
     await this.prisma.$transaction(
       async (tx) => {
+        // Coalesce null → 0 before incrementing so $inc never receives a null
+        // field (MongoDB throws "cannot increment with non-numeric argument" if it does).
+        await tx.$runCommandRaw({
+          update: 'monitors',
+          updates: [
+            {
+              q: { _id: { $oid: monitorId }, consecutiveFailures: null },
+              u: { $set: { consecutiveFailures: 0 } },
+              multi: false,
+            },
+          ],
+        });
+
         // Increment consecutive failures counter atomically
         const monitor = await tx.monitor.update({
           where: { id: monitorId },
@@ -137,11 +146,6 @@ export class IncidentConsumer {
             this.logger.log(
               `Open incident already claimed/exists for monitor ${monitorId}; skipping duplicate creation`,
             );
-            // Note: returning from inside a $transaction callback resolves
-            // the callback promise with undefined; it does NOT roll back
-            // the transaction. The consecutiveFailures increment above will
-            // still commit, which is the intended behaviour (the counter
-            // should keep climbing even if an incident is already open).
             return;
           }
 

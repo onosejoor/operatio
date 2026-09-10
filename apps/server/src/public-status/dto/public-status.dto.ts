@@ -20,7 +20,10 @@ export class PublicStatusPageDto {
   @ApiProperty({ example: 'acme' })
   slug!: string;
 
-  @ApiProperty({ example: 'Current operational status of Acme services', required: false })
+  @ApiProperty({
+    example: 'Current operational status of Acme services',
+    required: false,
+  })
   description?: string;
 
   @ApiProperty({ example: 'https://example.com/logo.png', required: false })
@@ -39,7 +42,10 @@ export class PublicMonitorDto {
   @ApiProperty({ example: 'API' })
   name!: string;
 
-  @ApiProperty({ enum: MonitorPerformanceStatus, example: MonitorPerformanceStatus.UP })
+  @ApiProperty({
+    enum: MonitorPerformanceStatus,
+    example: MonitorPerformanceStatus.UP,
+  })
   status!: MonitorPerformanceStatus;
 
   @ApiProperty({ example: 99.98, required: false, nullable: true })
@@ -56,7 +62,10 @@ export class PublicMonitorDto {
 }
 
 export class PublicIncidentEventDto {
-  @ApiProperty({ enum: ['STATUS_UPDATE', 'NOTE', 'UPDATE'], example: 'STATUS_UPDATE' })
+  @ApiProperty({
+    enum: ['STATUS_UPDATE', 'NOTE', 'UPDATE'],
+    example: 'STATUS_UPDATE',
+  })
   type!: string;
 
   @ApiProperty({
@@ -66,7 +75,10 @@ export class PublicIncidentEventDto {
   })
   status?: string;
 
-  @ApiProperty({ example: 'Incident created due to consecutive monitor failures', required: false })
+  @ApiProperty({
+    example: 'Incident created due to consecutive monitor failures',
+    required: false,
+  })
   message?: string;
 
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
@@ -89,11 +101,21 @@ export class PublicIncidentDto {
   @ApiProperty({ example: 'API endpoint returning 503', required: false })
   title?: string;
 
-  @ApiProperty({ enum: ['MINOR', 'MAJOR', 'CRITICAL'], example: 'MAJOR', required: false })
+  @ApiProperty({
+    enum: ['MINOR', 'MAJOR', 'CRITICAL'],
+    example: 'MAJOR',
+    required: false,
+  })
   severity?: string;
 
-  @ApiProperty({ example: 'We are investigating an issue with this monitor', required: false })
+  @ApiProperty({
+    example: 'We are investigating an issue with this monitor',
+    required: false,
+  })
   publicMessage?: string;
+
+  @ApiProperty({ example: '0000-0000-0000-0000', required: true })
+  publicId!: string;
 
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
   startedAt!: string;

@@ -288,7 +288,8 @@ export class MonitorCheckService {
     newStatus: MonitorStatus,
     checkedAt: Date,
   ): Promise<void> {
-    if (previousStatus !== newStatus) {
+    console.log({ previousStatus, newStatus });
+    if (previousStatus !== newStatus || newStatus === MonitorStatus.DOWN) {
       await this.outboxWriter.writeTx(tx, {
         aggregateType: AggregateType.Monitor,
         idempotencyKey: `monitor-status-changed-${monitorId}-${checkedAt.getTime()}`,

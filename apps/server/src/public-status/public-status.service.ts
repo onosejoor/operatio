@@ -150,6 +150,7 @@ export class PublicStatusService {
         publicMessage: true,
         detectedAt: true,
         resolvedAt: true,
+        publicId: true,
         durationMs: true,
         events: {
           select: {
@@ -174,6 +175,7 @@ export class PublicStatusService {
       publicMessage: incident.publicMessage ?? undefined,
       startedAt: incident.detectedAt.toISOString(),
       resolvedAt: incident.resolvedAt?.toISOString(),
+      publicId: incident.publicId,
       duration: incident.resolvedAt
         ? Math.floor(
             (incident.resolvedAt.getTime() - incident.detectedAt.getTime()) /
@@ -271,7 +273,9 @@ export class PublicStatusService {
     return Math.round((upChecks / totalChecks) * 10000) / 100;
   }
 
-  private async calculateAggregateUptime(monitorIds: string[]): Promise<number | null> {
+  private async calculateAggregateUptime(
+    monitorIds: string[],
+  ): Promise<number | null> {
     if (monitorIds.length === 0) {
       return null;
     }
@@ -318,7 +322,9 @@ export class PublicStatusService {
     return latestCheck?.responseTimeMs;
   }
 
-  private async calculateAverageResponseTime(monitorId: string): Promise<number | null> {
+  private async calculateAverageResponseTime(
+    monitorId: string,
+  ): Promise<number | null> {
     const checks = await this.prisma.monitorCheck.findMany({
       where: { monitorId },
       orderBy: { checkedAt: 'desc' },
@@ -330,7 +336,10 @@ export class PublicStatusService {
       return null;
     }
 
-    const totalResponseTime = checks.reduce((sum, c) => sum + c.responseTimeMs, 0);
+    const totalResponseTime = checks.reduce(
+      (sum, c) => sum + c.responseTimeMs,
+      0,
+    );
     return Math.round(totalResponseTime / checks.length);
   }
 
@@ -338,7 +347,7 @@ export class PublicStatusService {
     monitorId: string,
   ): Promise<DailyUptimeDto[]> {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-    
+
     // Fetch all checks for the 90-day period in a single query
     const allChecks = await this.prisma.monitorCheck.findMany({
       where: {
@@ -391,7 +400,8 @@ export class PublicStatusService {
 
       let uptimePercentage: number | null = null;
       if (dayData && dayData.total > 0) {
-        uptimePercentage = Math.round((dayData.up / dayData.total) * 10000) / 100;
+        uptimePercentage =
+          Math.round((dayData.up / dayData.total) * 10000) / 100;
       }
 
       dailyUptime.push({
@@ -467,7 +477,9 @@ export class PublicStatusService {
           sum + (inc.resolvedAt!.getTime() - inc.detectedAt.getTime()) / 1000,
         0,
       );
-      averageIncidentDuration = Math.round(totalDuration / resolvedIncidents.length);
+      averageIncidentDuration = Math.round(
+        totalDuration / resolvedIncidents.length,
+      );
     }
 
     return {

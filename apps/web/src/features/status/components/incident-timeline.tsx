@@ -153,10 +153,14 @@ export function ActiveIncidents({
   return (
     <div className="space-y-3">
       {active.map((incident) => {
-        const shortId = incident.id.slice(-6).toUpperCase();
+        const shortId =
+          incident.publicId || incident.id.slice(-6).toUpperCase();
+
         const startedDate = new Date(incident.startedAt);
         const currentStatus = incident.incidentStatus ?? "INVESTIGATING";
         const sev = severityLabel(incident.severity);
+
+        console.log({ currentStatus, sev, incident });
 
         return (
           <Card

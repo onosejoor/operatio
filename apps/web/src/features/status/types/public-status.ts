@@ -1,23 +1,23 @@
 export enum OverallStatus {
-  OPERATIONAL = 'operational',
-  DEGRADED = 'degraded',
-  MAJOR_OUTAGE = 'major_outage',
+  OPERATIONAL = "operational",
+  DEGRADED = "degraded",
+  MAJOR_OUTAGE = "major_outage",
 }
 
 export enum MonitorPerformanceStatus {
-  UP = 'UP',
-  DOWN = 'DOWN',
-  SLOW = 'SLOW',
-  PENDING = 'PENDING',
+  UP = "UP",
+  DOWN = "DOWN",
+  SLOW = "SLOW",
+  PENDING = "PENDING",
 }
 
 export type IncidentLifecycleStatus =
-  | 'INVESTIGATING'
-  | 'IDENTIFIED'
-  | 'MONITORING'
-  | 'RESOLVED';
+  | "INVESTIGATING"
+  | "IDENTIFIED"
+  | "MONITORING"
+  | "RESOLVED";
 
-export type IncidentSeverity = 'MINOR' | 'MAJOR' | 'CRITICAL';
+export type IncidentSeverity = "MINOR" | "MAJOR" | "CRITICAL";
 
 export interface PublicStatusPage {
   name: string;
@@ -50,7 +50,7 @@ export interface PublicIncidentEvent {
 export interface PublicIncident {
   id: string;
   /** Simple binary: 'active' | 'resolved' — for filtering */
-  status: 'active' | 'resolved';
+  status: "active" | "resolved";
   /** Full lifecycle status from backend */
   incidentStatus?: IncidentLifecycleStatus;
   title?: string;
@@ -62,6 +62,7 @@ export interface PublicIncident {
   duration?: number;
   /** Duration in milliseconds (stored by backend on resolve) */
   durationMs?: number;
+  publicId?: string;
   events?: PublicIncidentEvent[];
 }
 
