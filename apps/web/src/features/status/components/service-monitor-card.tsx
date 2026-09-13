@@ -46,7 +46,7 @@ export function ServiceMonitorCard({
           ? "bg-status-outage/4"
           : isSlow
             ? "bg-status-degraded/4"
-            : "bg-card/6 0hover:bg-card"
+            : "bg-card"
       }`}
     >
       {/* Top Header Row: Service Name & Status Badge */}

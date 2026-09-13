@@ -32,10 +32,8 @@ function getTooltipText(day: DailyUptime) {
   if (!day.date) return "No data";
   const dateObj = new Date(day.date);
   const formattedDate = format(dateObj, "MMM d, yyyy");
-  const isToday = new Date().toISOString().split("T")[0] === day.date;
-  const datePrefix = isToday ? `${formattedDate} (Today)` : formattedDate;
   const pct = day.uptimePercentage;
-  if (pct === null || pct === undefined) return `${datePrefix}: No data`;
+  if (pct === null || pct === undefined) return `${formattedDate}: No data`;
 
   const hasFailures =
     (day.failureCount && day.failureCount > 0) ||
@@ -43,7 +41,7 @@ function getTooltipText(day: DailyUptime) {
     pct < 100;
 
   if (!hasFailures) {
-    return `${datePrefix}: 100% uptime (Operational)`;
+    return `${formattedDate}: 100% uptime (Operational)`;
   }
 
   // Calculate down minutes
@@ -54,7 +52,7 @@ function getTooltipText(day: DailyUptime) {
 
   const distance = formatDistanceStrict(0, downMins * 60 * 1000);
   const statusLabel = pct >= 95 ? "Degraded" : "Outage";
-  return `${datePrefix}: ${pct.toFixed(2)}% uptime (${statusLabel} \n Down for ${distance})`;
+  return `${formattedDate}: ${pct.toFixed(2)}% uptime (${statusLabel} \n Down for ${distance})`;
 }
 
 export function UptimeBars({
