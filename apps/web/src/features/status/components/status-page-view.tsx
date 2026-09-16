@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   usePublicStatus,
-  statusKeys,
 } from "@app/features/status/hooks/use-public-status";
 import type {
   PublicStatusResponse,
   PublicMonitor,
 } from "@app/features/status/types/public-status";
-import { PublicStatusHeader } from "@app/features/status/components/public-status-header";
 import { SystemStatusHero } from "@app/features/status/components/system-status-hero";
 import { ServiceMonitorCard } from "@app/features/status/components/service-monitor-card";
 import { ServiceDetailsDialog } from "@app/features/status/components/service-details-dialog";
@@ -19,7 +16,7 @@ import {
   IncidentHistory,
 } from "@app/features/status/components/incident-timeline";
 import { PublicStatusFooter } from "@app/features/status/components/public-status-footer";
-import { SubscribeDialog } from "@app/features/status/components/subscribe-dialog";
+import { StatusPageHeader } from "@app/features/status/components/status-page-header";
 import { Server, History, AlertCircle } from "lucide-react";
 
 interface StatusPageViewProps {
@@ -28,30 +25,11 @@ interface StatusPageViewProps {
 }
 
 export function StatusPageView({ slug, initialData }: StatusPageViewProps) {
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [isSubscribeOpen, setIsSubscribeOpen] = useState<boolean>(false);
   const [selectedMonitor, setSelectedMonitor] = useState<PublicMonitor | null>(
     null,
   );
-  const [lastCheckedTime, setLastCheckedTime] = useState<string>("just now");
-
-  const queryClient = useQueryClient();
 
   const { data = initialData } = usePublicStatus(slug, initialData);
-
-  // Manual refresh handler
-  const handleRefresh = useCallback(async () => {
-    if (!slug || isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({
-        queryKey: statusKeys.public(slug),
-      });
-      setLastCheckedTime("just now");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [slug, isRefreshing, queryClient]);
 
   const activeIncidents = data.incidents.filter((i) => i.status === "active");
   const overallUptime = data.aggregateUptime;
@@ -59,21 +37,20 @@ export function StatusPageView({ slug, initialData }: StatusPageViewProps) {
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-brand/20">
       {/* Header */}
-      <PublicStatusHeader
+      <StatusPageHeader
+        slug={slug}
         statusPage={data.statusPage}
         overallStatus={data.status}
-        isRefreshing={isRefreshing}
-        onRefresh={handleRefresh}
-        onOpenSubscribe={() => setIsSubscribeOpen(true)}
+        activeTab="overview"
       />
 
       {/* Main Container */}
       <main className="mx-auto max-w-5xl px-4 sm:px-6 pb-16">
+
         {/* Overall Status Hero */}
         <SystemStatusHero
           status={data.status}
           overallUptime={overallUptime}
-          lastCheckedTime={lastCheckedTime}
         />
 
         {/* Active Incident Banner — compact alert that scrolls to full incident list */}
@@ -158,13 +135,6 @@ export function StatusPageView({ slug, initialData }: StatusPageViewProps) {
         monitor={selectedMonitor}
         isOpen={Boolean(selectedMonitor)}
         onClose={() => setSelectedMonitor(null)}
-      />
-
-      {/* Subscribe Dialog */}
-      <SubscribeDialog
-        isOpen={isSubscribeOpen}
-        onClose={() => setIsSubscribeOpen(false)}
-        statusPageName={data.statusPage.name}
       />
     </div>
   );

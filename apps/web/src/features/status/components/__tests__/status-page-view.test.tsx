@@ -312,7 +312,7 @@ describe("Public Status Components", () => {
       expect(
         screen.getByText("Payment gateway timeout spike"),
       ).toBeInTheDocument();
-      expect(screen.getByText("Investigating")).toBeInTheDocument();
+      expect(screen.getAllByText("Investigating")).toHaveLength(2);
       expect(screen.getByText("Major")).toBeInTheDocument();
       expect(
         screen.getByText("We are currently investigating elevated latency."),
@@ -412,12 +412,12 @@ describe("Public Status Components", () => {
       // Overall Status
       expect(screen.getByText("All systems operational")).toBeInTheDocument();
 
-      // Services
-      expect(screen.getByText("Services")).toBeInTheDocument();
+      // Services - use getAllByText since Services appears in navigation
+      expect(screen.getAllByText("Services")).toHaveLength(2);
       expect(screen.getByText("Core API")).toBeInTheDocument();
 
-      // Incident History
-      expect(screen.getByText("Incident History")).toBeInTheDocument();
+      // Incident History - use getAllByText since Incidents appears in navigation
+      expect(screen.getAllByText("Incidents")).toHaveLength(3);
       expect(screen.getByText("No incidents recorded.")).toBeInTheDocument();
 
       // Strictly verify no internal telemetry sections
