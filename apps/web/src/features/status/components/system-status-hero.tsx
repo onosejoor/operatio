@@ -48,7 +48,7 @@ export function SystemStatusHero({
 
       {/* Main Operational Hero Card */}
       <Card
-        className={`relative overflow-hidden rounded-xl border p-6 sm:p-8 transition-all shadow-sm ${
+        className={`relative overflow-hidden rounded-xl border p-6 sm:p-8 transition-all ${
           isHealthy
             ? "bg-status-operational/3"
             : isMajor

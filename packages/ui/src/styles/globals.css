@@ -107,10 +107,10 @@
    =========================================================== */
 
 :root {
-  --background: #faf9f9; /* was #ffffff — gives cards something to sit on */
+  --background: #f0eeee; /* darker than before — real separation from cards */
   --foreground: #1c1819;
 
-  --card: #ffffff; /* now visibly lighter than background */
+  --card: #ffffff; /* stays white — now clearly "lifted" off the bg */
   --card-foreground: #1c1819;
 
   --popover: #ffffff;
@@ -121,22 +121,22 @@
 
   --brand: #e31d61;
   --brand-foreground: #ffffff;
-  --brand-muted: #f2355133; /* ~20% opacity, was 1f (~12%) */
+  --brand-muted: #f2355133;
   --brand-accent: #ea2845;
 
-  --secondary: #f2eff0; /* was #f7f7f7 — slightly more separation */
+  --secondary: #e9e6e7;
   --secondary-foreground: #1c1819;
 
-  --muted: #eeebec; /* was #f2eff0 — a bit more presence */
-  --muted-foreground: #5f666b; /* was #7a8186 — now ~5.2:1, passes AA */
+  --muted: #e6e3e4;
+  --muted-foreground: #5f666b;
 
-  --accent: #f2355133; /* matches brand-muted bump */
+  --accent: #f2355133;
   --accent-foreground: #e31d61;
 
   --destructive: #e31d61;
 
-  --border: #e2e2e2;
-  --input: #e2e2e2;
+  --border: #dcdcdc;
+  --input: #dcdcdc;
   --ring: #e31d61;
 
   --chart-1: #e31d61;
@@ -145,7 +145,7 @@
   --chart-4: #ff8a3d;
   --chart-5: #2ba4e8;
 
-  --sidebar: #f2eff0; /* was #f7f7f7 */
+  --sidebar: #e9e6e7;
   --sidebar-foreground: #1c1819;
 
   --sidebar-primary: #e31d61;
@@ -154,7 +154,7 @@
   --sidebar-accent: #f2355133;
   --sidebar-accent-foreground: #e31d61;
 
-  --sidebar-border: #e2e2e2;
+  --sidebar-border: #dcdcdc;
   --sidebar-ring: #e31d61;
 
   --status-operational: #07efa5;
