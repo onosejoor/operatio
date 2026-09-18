@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  usePublicStatus,
-} from "@app/features/status/hooks/use-public-status";
+import { usePublicStatus } from "@app/features/status/hooks/use-public-status";
 import type {
   PublicStatusResponse,
   PublicMonitor,
@@ -15,8 +13,6 @@ import {
   ActiveIncidents,
   IncidentHistory,
 } from "@app/features/status/components/incident-timeline";
-import { PublicStatusFooter } from "@app/features/status/components/public-status-footer";
-import { StatusPageHeader } from "@app/features/status/components/status-page-header";
 import { Server, History, AlertCircle } from "lucide-react";
 
 interface StatusPageViewProps {
@@ -35,23 +31,10 @@ export function StatusPageView({ slug, initialData }: StatusPageViewProps) {
   const overallUptime = data.aggregateUptime;
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-brand/20">
-      {/* Header */}
-      <StatusPageHeader
-        slug={slug}
-        statusPage={data.statusPage}
-        overallStatus={data.status}
-        activeTab="overview"
-      />
-
-      {/* Main Container */}
+    <>
       <main className="mx-auto max-w-5xl px-4 sm:px-6 pb-16">
-
         {/* Overall Status Hero */}
-        <SystemStatusHero
-          status={data.status}
-          overallUptime={overallUptime}
-        />
+        <SystemStatusHero status={data.status} overallUptime={overallUptime} />
 
         {/* Active Incident Banner — compact alert that scrolls to full incident list */}
         {activeIncidents.length > 0 && (
@@ -127,15 +110,12 @@ export function StatusPageView({ slug, initialData }: StatusPageViewProps) {
         </section>
       </main>
 
-      {/* Footer */}
-      <PublicStatusFooter statusPageName={data.statusPage.name} />
-
       {/* Progressive Disclosure Dialog: Service Details */}
       <ServiceDetailsDialog
         monitor={selectedMonitor}
         isOpen={Boolean(selectedMonitor)}
         onClose={() => setSelectedMonitor(null)}
       />
-    </div>
+    </>
   );
 }

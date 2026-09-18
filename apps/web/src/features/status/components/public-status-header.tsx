@@ -1,31 +1,57 @@
 "use client";
 
-import { useState } from "react";
-import { OverallStatus } from "../types/public-status";
+import { useCallback, useState } from "react";
 import { Bell, RefreshCw } from "lucide-react";
 import { Button } from "@operatio/ui/components/ui/button";
 import { Badge } from "@operatio/ui/components/ui/badge";
 import Image from "next/image";
 import { SubscribeDialog } from "./subscribe-dialog";
 import { StatusNavigation } from "./status-navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { statusKeys, usePublicStatus } from "../hooks/use-public-status";
+import { useParams } from "next/navigation";
+import { LoaderDisplay } from "@operatio/ui/components/loader-display";
+import { ErrorDisplay } from "@operatio/ui/components/error-display";
+import { OverallStatus } from "../types/public-status";
 
-interface PublicStatusHeaderProps {
-  statusPage: {
-    name: string;
-    description?: string;
-    logo?: string;
-  };
-  overallStatus: OverallStatus;
-  isRefreshing: boolean;
-  onRefresh: () => void;
-}
-
-export function PublicStatusHeader({
-  statusPage,
-  isRefreshing,
-  onRefresh,
-}: PublicStatusHeaderProps) {
+export function PublicStatusHeader() {
   const [isSubscribeOpen, setIsSubscribeOpen] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { slug } = useParams<{ slug: string }>();
+
+  const queryClient = useQueryClient();
+
+  const { isLoading, data, isError, error } = usePublicStatus(slug, {
+    statusPage: {
+      name: "Unknown",
+      slug: "-",
+    },
+    status: OverallStatus.OPERATIONAL,
+    monitors: [],
+    incidents: [],
+  });
+
+  const handleRefresh = useCallback(async () => {
+    if (!slug || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: statusKeys.public(slug),
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [slug, isRefreshing, queryClient]);
+
+  if (isError) {
+    return <ErrorDisplay message={error.message} />;
+  }
+
+  if (isLoading) {
+    return <LoaderDisplay message="loading" />;
+  }
+
+  const { statusPage } = data;
 
   return (
     <>
@@ -77,7 +103,7 @@ export function PublicStatusHeader({
             {/* Refresh Button */}
             <Button
               type="button"
-              onClick={onRefresh}
+              onClick={handleRefresh}
               disabled={isRefreshing}
               variant="ghost"
               size="sm"

@@ -19,37 +19,39 @@ async function bootstrap() {
   const appConfig = app.get(AppConfigService);
   const logger = new Logger('Bootstrap');
 
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        "script-src": [
-          "'self'",
-          "'unsafe-inline'",
-          "cdn.jsdelivr.net",
-          "https://cdn.jsdelivr.net",
-        ],
-        "script-src-elem": [
-          "'self'",
-          "'unsafe-inline'",
-          "cdn.jsdelivr.net",
-          "https://cdn.jsdelivr.net",
-        ],
-        "style-src": [
-          "'self'",
-          "'unsafe-inline'",
-          "cdn.jsdelivr.net",
-          "https://cdn.jsdelivr.net",
-        ],
-        "img-src": [
-          "'self'",
-          "data:",
-          "cdn.jsdelivr.net",
-          "https://cdn.jsdelivr.net",
-        ],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'script-src': [
+            "'self'",
+            "'unsafe-inline'",
+            'cdn.jsdelivr.net',
+            'https://cdn.jsdelivr.net',
+          ],
+          'script-src-elem': [
+            "'self'",
+            "'unsafe-inline'",
+            'cdn.jsdelivr.net',
+            'https://cdn.jsdelivr.net',
+          ],
+          'style-src': [
+            "'self'",
+            "'unsafe-inline'",
+            'cdn.jsdelivr.net',
+            'https://cdn.jsdelivr.net',
+          ],
+          'img-src': [
+            "'self'",
+            'data:',
+            'cdn.jsdelivr.net',
+            'https://cdn.jsdelivr.net',
+          ],
+        },
       },
-    },
-  }),);
+    }),
+  );
   app.use(cookieParser());
 
   // Global API prefix
@@ -65,9 +67,39 @@ async function bootstrap() {
   app.useGlobalInterceptors(new RequestIdInterceptor());
 
   // CORS configuration
+  const appOrigin = appConfig.get('app.appOrigin') || '';
   const corsOrigin = appConfig.get('app.corsOrigin');
+
   app.enableCors({
-    origin: corsOrigin,
+    origin: (origin, callback) => {
+      console.log({ origin, corsOrigin, appOrigin });
+      // 1. Allow server-to-server or API tools (Postman, curl)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (corsOrigin.split(',').includes(origin)) {
+        return callback(null, true);
+      }
+
+      try {
+        const escapedDomain = appOrigin.replace(/\./g, '\\.');
+
+        const dynamicRegex = new RegExp(
+          `^https?:\/\/([a-z0-9-]+.)*${escapedDomain}(:[0-9]+)?$`,
+          'i',
+        );
+
+        if (dynamicRegex.test(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS blocked for origin: ${origin}`), false);
+        }
+      } catch (error) {
+        // Fallback safety if the regex creation fails
+        callback(new Error('Invalid CORS configuration setup'), false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],

@@ -107,40 +107,36 @@
    =========================================================== */
 
 :root {
-  --background: #ffffff;
+  --background: #faf9f9; /* was #ffffff — gives cards something to sit on */
   --foreground: #1c1819;
 
-  --card: #ffffff;
+  --card: #ffffff; /* now visibly lighter than background */
   --card-foreground: #1c1819;
 
   --popover: #ffffff;
   --popover-foreground: #1c1819;
-
-  /* ---------------------------------------------------------
-     Primary — NestJS red
-     --------------------------------------------------------- */
 
   --primary: #e31d61;
   --primary-foreground: #ffffff;
 
   --brand: #e31d61;
   --brand-foreground: #ffffff;
-  --brand-muted: #f235511f;
+  --brand-muted: #f2355133; /* ~20% opacity, was 1f (~12%) */
   --brand-accent: #ea2845;
 
-  --secondary: #f7f7f7;
+  --secondary: #f2eff0; /* was #f7f7f7 — slightly more separation */
   --secondary-foreground: #1c1819;
 
-  --muted: #f2eff0;
-  --muted-foreground: #7a8186;
+  --muted: #eeebec; /* was #f2eff0 — a bit more presence */
+  --muted-foreground: #5f666b; /* was #7a8186 — now ~5.2:1, passes AA */
 
-  --accent: #f235511f;
+  --accent: #f2355133; /* matches brand-muted bump */
   --accent-foreground: #e31d61;
 
   --destructive: #e31d61;
 
-  --border: #dfdfdf;
-  --input: #dfdfdf;
+  --border: #e2e2e2;
+  --input: #e2e2e2;
   --ring: #e31d61;
 
   --chart-1: #e31d61;
@@ -149,16 +145,16 @@
   --chart-4: #ff8a3d;
   --chart-5: #2ba4e8;
 
-  --sidebar: #f7f7f7;
+  --sidebar: #f2eff0; /* was #f7f7f7 */
   --sidebar-foreground: #1c1819;
 
   --sidebar-primary: #e31d61;
   --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent: #f235511f;
+  --sidebar-accent: #f2355133;
   --sidebar-accent-foreground: #e31d61;
 
-  --sidebar-border: #dfdfdf;
+  --sidebar-border: #e2e2e2;
   --sidebar-ring: #e31d61;
 
   --status-operational: #07efa5;

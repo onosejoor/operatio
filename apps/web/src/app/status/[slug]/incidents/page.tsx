@@ -37,13 +37,8 @@ export default async function IncidentsPage({ params }: IncidentsPageProps) {
   try {
     const initialData = await getPublicStatus(slug);
 
-    return (
-      <IncidentsPageView
-        slug={slug}
-        initialData={initialData}
-      />
-    );
-  } catch {
+    return <IncidentsPageView slug={slug} initialData={initialData} />;
+  } catch (error) {
     return (
       <ErrorDisplay
         message="Status Page Not Found"

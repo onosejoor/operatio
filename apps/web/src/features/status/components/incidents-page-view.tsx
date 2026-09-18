@@ -1,18 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  usePublicStatus,
-  statusKeys,
-} from "@app/features/status/hooks/use-public-status";
+import { usePublicStatus } from "@app/features/status/hooks/use-public-status";
 import type { PublicStatusResponse } from "@app/features/status/types/public-status";
-import { PublicStatusHeader } from "@app/features/status/components/public-status-header";
 import {
   ActiveIncidents,
   IncidentHistory,
 } from "@app/features/status/components/incident-timeline";
-import { PublicStatusFooter } from "@app/features/status/components/public-status-footer";
 
 interface IncidentsPageViewProps {
   slug: string;
@@ -23,23 +16,7 @@ export function IncidentsPageView({
   slug,
   initialData,
 }: IncidentsPageViewProps) {
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-
-  const queryClient = useQueryClient();
-
   const { data = initialData } = usePublicStatus(slug, initialData);
-
-  const handleRefresh = useCallback(async () => {
-    if (!slug || isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({
-        queryKey: statusKeys.public(slug),
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [slug, isRefreshing, queryClient]);
 
   const activeIncidents = data.incidents.filter((i) => i.status === "active");
   const resolvedIncidents = data.incidents.filter(
@@ -47,18 +24,9 @@ export function IncidentsPageView({
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-brand/20">
-      {/* Header */}
-      <PublicStatusHeader
-        statusPage={data.statusPage}
-        overallStatus={data.status}
-        isRefreshing={isRefreshing}
-        onRefresh={handleRefresh}
-      />
-
+    <>
       {/* Main Container */}
       <main className="mx-auto max-w-5xl px-4 sm:px-6 pb-16">
-
         {/* Page Title */}
         <div className="mt-8 mb-6">
           <h1 className="text-2xl font-semibold text-foreground">Incidents</h1>
@@ -122,9 +90,6 @@ export function IncidentsPageView({
           )}
         </section>
       </main>
-
-      {/* Footer */}
-      <PublicStatusFooter statusPageName={data.statusPage.name} />
-    </div>
+    </>
   );
 }

@@ -4,6 +4,7 @@ export const envConfig = {
     port: parseInt(process.env.PORT || '', 10) || 3000,
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    appOrigin: process.env.APP_ORIGIN,
   },
   database: {
     url: process.env.DATABASE_URL || 'mongodb://localhost:27017/operatio',

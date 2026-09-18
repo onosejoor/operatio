@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
+import { useParams } from "next/navigation";
 
-export function PublicStatusFooter({
-  statusPageName,
-}: {
-  statusPageName: string;
-}) {
+export function PublicStatusFooter() {
   const [utcTime, setUtcTime] = useState<string>("");
+  const { slug } = useParams<{ slug: string }>();
+
+  let statusPageName = slug;
+  // if (!window) {
+  //   statusPageName = window?.location.href.split(".")[0];
+  // } else {
+  //   statusPageName = slug;
+  // }
 
   useEffect(() => {
     const updateTime = () => {
@@ -26,10 +31,12 @@ export function PublicStatusFooter({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 font-mono text-[11px]">
             <Globe className="h-3.5 w-3.5 text-muted-foreground/70" />
-            <span className="tabular-nums">{utcTime || "UTC Operational Time"}</span>
+            <span className="tabular-nums">
+              {utcTime || "UTC Operational Time"}
+            </span>
           </div>
           <span className="text-border">·</span>
-          <span>{statusPageName} Status</span>
+          <span className="capitalize">{statusPageName} Status</span>
         </div>
 
         <div className="flex items-center gap-4 text-xs">
