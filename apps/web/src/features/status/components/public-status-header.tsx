@@ -53,6 +53,8 @@ export function PublicStatusHeader() {
 
   const { statusPage } = data;
 
+  console.log(data);
+
   return (
     <>
       <header className="sticky top-3 z-50 w-full px-4 sm:px-6">
