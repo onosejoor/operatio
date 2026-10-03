@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   Res,
@@ -19,6 +20,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { TokenPair, TokenService } from './token.service';
 import { AppConfigService } from '../config/service/app-config.service';
@@ -116,6 +118,11 @@ export class AuthController {
     description: 'Invalid credentials',
     type: ApiResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Email address must be verified before login',
+    type: ApiResponseDto,
+  })
   @ApiBody({ type: LoginDto })
   async login(
     @Body() loginDto: LoginDto,
@@ -194,6 +201,20 @@ export class AuthController {
   async me(@CurrentUser() user: AuthenticatedUser) {
     const userData = await this.authService.getUser(user.id);
     return ApiResponseDto.success(userData);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtCookieAuthGuard)
+  @ApiOperation({ summary: 'Update the authenticated user profile' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    return ApiResponseDto.success(
+      await this.authService.updateProfile(user.id, updateProfileDto.name),
+      'Profile updated successfully',
+    );
   }
 
   private setAuthCookies(response: Response, tokens: TokenPair): void {

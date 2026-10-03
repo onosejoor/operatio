@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -46,7 +47,7 @@ export class AuthService {
     });
     const verificationToken = randomBytes(32).toString('hex');
     const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const slug = this.generateSlug(name);
+    const slug = await this.generateSlug(name);
 
     try {
       const result = await this.prisma.$transaction(async (tx) => {
@@ -117,6 +118,14 @@ export class AuthService {
     return user;
   }
 
+  async updateProfile(id: string, name: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { name: name.trim() },
+      select: { name: true, email: true, emailVerified: true },
+    });
+  }
+
   async resendVerification(email: string) {
     const normalizedEmail = email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({
@@ -182,12 +191,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.emailVerified) {
+      throw new ForbiddenException({
+        message: 'Email address is not verified',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
     this.logger.log(`User logged in successfully: ${user.email}`);
     const tokens = await this.tokenService.createTokens(user.id);
-    const memberships = await this.prisma.membership.findMany({
-      where: { userId: user.id },
-      include: { organization: true },
-    });
 
     return {
       tokens,
@@ -218,11 +230,27 @@ export class AuthService {
       },
     });
   }
-  private generateSlug(name: string): string {
-    return `${name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')}-${Date.now().toString(36)}`;
+  private async generateSlug(name: string): Promise<string> {
+    const baseSlug =
+      name
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'organization';
+    let slug = baseSlug;
+    let suffix = 2;
+
+    while (
+      await this.prisma.organization.findUnique({
+        where: { slug },
+        select: { id: true },
+      })
+    ) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+
+    return slug;
   }
 }

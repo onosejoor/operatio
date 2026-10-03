@@ -11,15 +11,9 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
-import { QueryDto } from '../common/dto/query.dto';
+import { MonitorChecksQueryDto } from './dto/monitor-checks-query.dto';
 import { OrganizationMembershipGuard } from '../common/guards/organization-membership.guard';
 import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
 import { CurrentOrganizationId } from '../organizations/decorators/current-organization-id.decorator';
@@ -158,7 +152,7 @@ export class MonitorsController {
   async getChecks(
     @CurrentOrganizationId() organizationId: string,
     @Param('monitorId') monitorId: string,
-    @Query() query: QueryDto,
+    @Query() query: MonitorChecksQueryDto,
   ) {
     return ApiResponseDto.success(
       await this.monitorsService.getChecks(
@@ -168,6 +162,8 @@ export class MonitorsController {
         query.limit,
         query.fromDate,
         query.toDate,
+        query.status,
+        query.sort,
       ),
     );
   }

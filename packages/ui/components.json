@@ -15,6 +15,6 @@
     "utils": "@operatio/ui/lib/utils",
     "hooks": "@operatio/ui/hooks",
     "lib": "@operatio/ui/lib",
-    "ui": "@operatio/ui/components"
+    "ui": "@operatio/ui/components/ui"
   }
 }

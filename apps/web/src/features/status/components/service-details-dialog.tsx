@@ -11,10 +11,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@operatio/ui/components/dialog";
+} from "@operatio/ui/components/ui/dialog";
 import { Button } from "@operatio/ui/components/ui/button";
 import { Badge } from "@operatio/ui/components/ui/badge";
-import { Activity, Clock, Gauge, Globe, CheckCircle2 } from "lucide-react";
+import { Activity, Gauge, Globe, CheckCircle2 } from "lucide-react";
 
 interface ServiceDetailsDialogProps {
   monitor: PublicMonitor | null;
@@ -44,9 +44,11 @@ export function ServiceDetailsDialog({
 
   let stateExplanation = "All operational checks are passing normally.";
   if (isDown) {
-    stateExplanation = "Service is currently unavailable. Incident response or recovery may be active.";
+    stateExplanation =
+      "Service is currently unavailable. Incident response or recovery may be active.";
   } else if (isSlow) {
-    stateExplanation = "Service response latency is currently elevated above normal thresholds.";
+    stateExplanation =
+      "Service response latency is currently elevated above normal thresholds.";
   } else if (monitor.status === "PENDING") {
     stateExplanation = "Awaiting initial health check confirmation.";
   }

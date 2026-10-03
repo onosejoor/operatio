@@ -9,9 +9,69 @@ export class IncidentsService {
     id: true,
     monitorId: true,
     organizationId: true,
+    publicId: true,
+    title: true,
+    status: true,
+    severity: true,
+    publicMessage: true,
     detectedAt: true,
     resolvedAt: true,
+    durationMs: true,
+    monitor: { select: { name: true } },
+    events: {
+      select: { type: true, status: true, message: true, createdAt: true },
+      orderBy: { createdAt: 'asc' as const },
+    },
   };
+
+  private toIncidentResponse(incident: {
+    id: string;
+    monitorId: string;
+    organizationId: string;
+    publicId: string;
+    title: string | null;
+    status: string;
+    severity: string | null;
+    publicMessage: string | null;
+    detectedAt: Date;
+    resolvedAt: Date | null;
+    durationMs: number | null;
+    monitor: { name: string };
+    events: Array<{
+      type: string;
+      status: string | null;
+      message: string | null;
+      createdAt: Date;
+    }>;
+  }) {
+    return {
+      id: incident.id,
+      monitorId: incident.monitorId,
+      organizationId: incident.organizationId,
+      monitorName: incident.monitor.name,
+      publicId: incident.publicId,
+      title: incident.title ?? undefined,
+      status: incident.resolvedAt ? 'resolved' : 'active',
+      incidentStatus: incident.status,
+      severity: incident.severity ?? undefined,
+      publicMessage: incident.publicMessage ?? undefined,
+      startedAt: incident.detectedAt.toISOString(),
+      resolvedAt: incident.resolvedAt?.toISOString(),
+      duration: incident.resolvedAt
+        ? Math.floor(
+            (incident.resolvedAt.getTime() - incident.detectedAt.getTime()) /
+              1000,
+          )
+        : undefined,
+      durationMs: incident.durationMs ?? undefined,
+      events: incident.events.map((event) => ({
+        type: event.type,
+        status: event.status ?? undefined,
+        message: event.message ?? undefined,
+        createdAt: event.createdAt.toISOString(),
+      })),
+    };
+  }
 
   async getIncidentsForMonitor(
     organizationId: string,
@@ -19,9 +79,10 @@ export class IncidentsService {
     page: number = 1,
     limit: number = 50,
   ) {
-    // Verify monitor belongs to organization and is active
+    // Verify the monitor belongs to the organization. Inactive monitors retain
+    // their history and should remain accessible.
     const monitor = await this.prisma.monitor.findFirst({
-      where: { id: monitorId, organizationId, isActive: true },
+      where: { id: monitorId, organizationId },
     });
 
     if (!monitor) {
@@ -44,7 +105,7 @@ export class IncidentsService {
     ]);
 
     return {
-      data: incidents,
+      data: incidents.map((incident) => this.toIncidentResponse(incident)),
       meta: {
         total,
         page,
@@ -75,7 +136,7 @@ export class IncidentsService {
     ]);
 
     return {
-      data: incidents,
+      data: incidents.map((incident) => this.toIncidentResponse(incident)),
       meta: {
         total,
         page,
@@ -98,6 +159,6 @@ export class IncidentsService {
       throw new NotFoundException('Incident not found');
     }
 
-    return incident;
+    return this.toIncidentResponse(incident);
   }
 }

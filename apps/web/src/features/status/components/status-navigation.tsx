@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, History, BarChart3 } from "lucide-react";
+import { Home, History } from "lucide-react";
 import { cn } from "@operatio/ui/lib/utils";
 import { usePathname } from "next/navigation";
 

@@ -70,7 +70,7 @@ export function PublicStatusHeader() {
                 />
               </div>
             ) : (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/40 font-mono text-xs font-bold text-foreground shadow-2xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold shadow-2xs" style={{ color: statusPage.brandColor ?? "#2563eb", borderColor: statusPage.brandColor ?? "#2563eb", backgroundColor: `${statusPage.brandColor ?? "#2563eb"}14` }}>
                 {statusPage.name.slice(0, 2).toUpperCase()}
               </div>
             )}
@@ -128,6 +128,7 @@ export function PublicStatusHeader() {
               size="sm"
               variant="default"
               className="h-7 sm:h-8 gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs active:scale-95 transition-all"
+              style={{ backgroundColor: statusPage.brandColor ?? "#2563eb", color: "white" }}
             >
               <Bell className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               <span className="text-[11px] sm:text-xs">Subscribe</span>

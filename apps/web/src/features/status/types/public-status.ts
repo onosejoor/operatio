@@ -24,6 +24,7 @@ export interface PublicStatusPage {
   slug: string;
   description?: string;
   logo?: string;
+  brandColor?: string;
 }
 
 export interface DailyUptime {
@@ -51,6 +52,7 @@ export interface PublicIncidentEvent {
 
 export interface PublicIncident {
   id: string;
+  monitorName?: string;
   /** Simple binary: 'active' | 'resolved' — for filtering */
   status: "active" | "resolved";
   /** Full lifecycle status from backend */
@@ -73,6 +75,12 @@ export interface PublicStatusResponse {
   status: OverallStatus;
   monitors: PublicMonitor[];
   incidents: PublicIncident[];
+  maintenanceWindows?: Array<{
+    title: string;
+    description?: string;
+    startsAt: string;
+    endsAt: string;
+  }>;
   aggregateUptime?: number | null;
 }
 

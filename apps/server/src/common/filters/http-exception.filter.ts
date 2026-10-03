@@ -23,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
     const message = this.getMessage(exception);
 
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (status >= 500) {
       this.logger.error(
         `${request.method} ${request.url} ${status} - ${message}`,
         exception instanceof Error ? exception.stack : undefined,
@@ -34,7 +34,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).json(ApiResponseDto.error(message));
+    response
+      .status(status)
+      .json(ApiResponseDto.error(message, this.getCode(exception)));
   }
 
   private getMessage(exception: unknown): string {
@@ -59,5 +61,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     return typeof message === 'string' ? message : 'Request failed';
+  }
+
+  private getCode(exception: unknown): string | undefined {
+    if (!(exception instanceof HttpException)) return undefined;
+
+    const exceptionResponse = exception.getResponse();
+    if (
+      typeof exceptionResponse === 'object' &&
+      exceptionResponse !== null &&
+      'code' in exceptionResponse
+    ) {
+      const code = (exceptionResponse as { code?: unknown }).code;
+      return typeof code === 'string' ? code : undefined;
+    }
+
+    return undefined;
   }
 }
