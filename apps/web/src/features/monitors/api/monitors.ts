@@ -1,5 +1,6 @@
 import { apiFetch } from "@app/lib/api/client";
 import type { ApiResponse } from "@app/lib/types";
+import type { PublicIncident } from "@app/features/status/types/public-status";
 
 export interface MonitorSummary {
   id: string;
@@ -8,6 +9,7 @@ export interface MonitorSummary {
   status: "UP" | "DOWN" | "PENDING";
   interval: number;
   isActive: boolean;
+  isPublic: boolean;
   lastCheckedAt: string | null;
   lastStatusCode: number | null;
   lastResponseTimeMs: number | null;
@@ -15,7 +17,6 @@ export interface MonitorSummary {
 
 export interface MonitorDetail extends MonitorSummary {
   timeout: number;
-  isPublic: boolean;
   nextCheckAt: string | null;
 }
 
@@ -63,11 +64,10 @@ export interface UpdateMonitorInput extends Partial<CreateMonitorInput> {
 export type MonitorCheckSort = "newest" | "oldest" | "slowest";
 export type MonitorCheckStatus = MonitorSummary["status"];
 
-export interface IncidentSummary {
-  id: string;
+export interface IncidentSummary extends PublicIncident {
   monitorId: string;
-  detectedAt: string;
-  resolvedAt: string | null;
+  organizationId: string;
+  monitorName: string;
 }
 
 export function getMonitors(organizationId: string) {

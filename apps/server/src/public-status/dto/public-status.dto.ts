@@ -28,6 +28,9 @@ export class PublicStatusPageDto {
 
   @ApiProperty({ example: 'https://example.com/logo.png', required: false })
   logo?: string;
+
+  @ApiProperty({ example: '#2563eb', required: false })
+  brandColor?: string;
 }
 
 export class DailyUptimeDto {
@@ -94,6 +97,9 @@ export class PublicIncidentEventDto {
 export class PublicIncidentDto {
   @ApiProperty()
   id!: string;
+
+  @ApiProperty({ example: 'API', required: false })
+  monitorName?: string;
 
   @ApiProperty({ enum: ['active', 'resolved'], example: 'active' })
   status!: string;

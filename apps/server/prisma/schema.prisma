@@ -301,6 +301,7 @@ model StatusPage {
   isPublic       Boolean  @default(false)
   description    String?
   logo           String?
+  brandColor     String?  @default("#2563eb")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

@@ -131,10 +131,12 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
     );
   }
 
-  const upCount = monitorList.filter(
+  const enabledMonitors = monitorList.filter((monitor) => monitor.isActive);
+  const pausedMonitorCount = monitorList.length - enabledMonitors.length;
+  const upCount = enabledMonitors.filter(
     (monitor) => monitor.status === "UP",
   ).length;
-  const downCount = monitorList.filter(
+  const downCount = enabledMonitors.filter(
     (monitor) => monitor.status === "DOWN",
   ).length;
 
@@ -144,7 +146,7 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
       value: monitorList.length,
       icon: Activity,
       iconClass: "text-muted-foreground",
-      hint: "Active monitors",
+      hint: `${enabledMonitors.length} enabled · ${pausedMonitorCount} paused`,
     },
     {
       label: "Operational",

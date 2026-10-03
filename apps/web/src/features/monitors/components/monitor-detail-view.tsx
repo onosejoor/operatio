@@ -258,7 +258,10 @@ export function MonitorDetailView({
             <h2 className="truncate text-2xl font-semibold tracking-tight">
               {monitor.name}
             </h2>
-            <MonitorStatusBadge status={monitor.status} />
+              <MonitorStatusBadge
+                status={monitor.status}
+                isActive={monitor.isActive}
+              />
           </div>
           <p className="break-all font-mono text-sm text-muted-foreground">
             {monitor.url}

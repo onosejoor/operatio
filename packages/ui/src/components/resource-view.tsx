@@ -28,6 +28,7 @@ interface ResourceViewProps<T> {
   defaultViewMode?: ViewMode
   onRowClick?: (item: T) => void
   rowOffset?: number
+  renderActions?: (item: T) => React.ReactNode
 }
 
 export function ResourceView<T>({
@@ -39,6 +40,7 @@ export function ResourceView<T>({
   defaultViewMode = "cards",
   onRowClick,
   rowOffset = 0,
+  renderActions,
 }: ResourceViewProps<T>) {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode)
 
@@ -47,7 +49,7 @@ export function ResourceView<T>({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-x-auto">
       <div className="flex justify-end px-6 pt-2">
         <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
           <Button
@@ -103,6 +105,11 @@ export function ResourceView<T>({
                   {col.header}
                 </TableHead>
               ))}
+              {renderActions && (
+                <TableHead className="h-10 w-12 px-4 text-right text-xs font-medium text-muted-foreground last:pr-6">
+                  Actions
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -129,6 +136,11 @@ export function ResourceView<T>({
                     {col.cell(item)}
                   </TableCell>
                 ))}
+                {renderActions && (
+                  <TableCell className="w-12 px-4 py-3.5 text-right last:pr-6">
+                    {renderActions(item)}
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

@@ -28,18 +28,27 @@ const statusConfig: Record<
   },
   PENDING: {
     label: "Pending",
-    badge: "bg-status-paused-muted text-status-paused-text",
-    dot: "bg-status-paused",
-    tone: "text-foreground",
+    badge: "bg-status-maintenance-muted text-status-maintenance-text",
+    dot: "bg-status-maintenance",
+    tone: "text-status-maintenance-text",
   },
 };
 
 export function MonitorStatusBadge({
   status,
+  isActive = true,
 }: {
   status: MonitorSummary["status"];
+  isActive?: boolean;
 }) {
-  const config = statusConfig[status];
+  const config = isActive
+    ? statusConfig[status]
+    : {
+        label: "Paused",
+        badge: "bg-status-paused-muted text-status-paused-text",
+        dot: "bg-status-paused",
+        tone: "text-status-paused-text",
+      };
   return (
     <span
       className={cn(
@@ -52,7 +61,7 @@ export function MonitorStatusBadge({
         className={cn(
           "size-1.5 rounded-full",
           config.dot,
-          status === "DOWN" && "status-pulse",
+          isActive && status === "DOWN" && "status-pulse",
         )}
       />
       {config.label}
@@ -147,7 +156,9 @@ export const monitorColumns: Column<MonitorSummary>[] = [
   },
   {
     header: "Status",
-    cell: (monitor) => <MonitorStatusBadge status={monitor.status} />,
+    cell: (monitor) => (
+      <MonitorStatusBadge status={monitor.status} isActive={monitor.isActive} />
+    ),
   },
   {
     header: "Response",
@@ -167,10 +178,13 @@ export function MonitorSummaryCard({ monitor }: { monitor: MonitorSummary }) {
     <Card className="flex flex-col justify-between">
       <CardHeader className="space-y-1.5 pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="truncate text-base font-semibold">
+          <CardTitle className="truncate text-lg font-bold tracking-tight">
             {monitor.name}
           </CardTitle>
-          <MonitorStatusBadge status={monitor.status} />
+          <MonitorStatusBadge
+            status={monitor.status}
+            isActive={monitor.isActive}
+          />
         </div>
         <CardDescription className="truncate font-mono text-xs">
           {monitor.url}

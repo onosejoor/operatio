@@ -41,6 +41,7 @@ export class PublicStatusService {
         slug: statusPage.slug,
         description: statusPage.description || '',
         logo: statusPage.logo || '',
+        brandColor: statusPage.brandColor || '#2563eb',
       },
       status: overallStatus,
       monitors,
@@ -59,6 +60,7 @@ export class PublicStatusService {
         slug: true,
         description: true,
         logo: true,
+        brandColor: true,
         isPublic: true,
       },
     });
@@ -153,6 +155,7 @@ export class PublicStatusService {
         resolvedAt: true,
         publicId: true,
         durationMs: true,
+        monitor: { select: { name: true } },
         events: {
           select: {
             type: true,
@@ -172,6 +175,7 @@ export class PublicStatusService {
       status: incident.resolvedAt ? 'resolved' : 'active',
       incidentStatus: incident.status,
       title: incident.title ?? undefined,
+      monitorName: incident.monitor.name,
       severity: incident.severity ?? undefined,
       publicMessage: incident.publicMessage ?? undefined,
       startedAt: incident.detectedAt.toISOString(),

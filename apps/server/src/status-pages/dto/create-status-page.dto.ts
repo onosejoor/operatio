@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUrl, IsBoolean, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUrl, IsBoolean, MaxLength, IsHexColor } from 'class-validator';
 
 export class CreateStatusPageDto {
   @ApiProperty({ example: 'Acme Status' })
@@ -39,4 +39,9 @@ export class CreateStatusPageDto {
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   @IsOptional()
   logo?: string;
+
+  @ApiProperty({ example: '#2563eb', required: false })
+  @IsHexColor()
+  @IsOptional()
+  brandColor?: string;
 }

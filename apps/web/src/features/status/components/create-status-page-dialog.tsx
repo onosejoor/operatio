@@ -1,0 +1,112 @@
+"use client";
+
+import { Controller, useForm } from "react-hook-form";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@operatio/ui/components/ui/field";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@operatio/ui/components/ui/dialog";
+import { Button } from "@operatio/ui/components/ui/button";
+import { Input } from "@operatio/ui/components/ui/input";
+import { Switch } from "@operatio/ui/components/ui/switch";
+import { Textarea } from "@operatio/ui/components/ui/textarea";
+import { toast } from "@operatio/ui/components/ui/sonner";
+import { useCreateStatusPage, useUpdateStatusPage } from "../hooks/status-pages-queries";
+import type { StatusPageInput, StatusPageSummary } from "../api/status-pages";
+
+interface StatusPageDialogProps {
+  organizationId: string;
+  page?: StatusPageSummary;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const defaults: StatusPageInput = {
+  name: "",
+  slug: "",
+  description: "",
+  isPublic: false,
+  brandColor: "#2563eb",
+};
+
+export function StatusPageDialog({ organizationId, page, open, onOpenChange }: StatusPageDialogProps) {
+  const create = useCreateStatusPage(organizationId);
+  const update = useUpdateStatusPage(organizationId, page?.id ?? "");
+  const form = useForm<StatusPageInput>({
+    defaultValues: page
+      ? { name: page.name, slug: page.slug, description: page.description ?? "", isPublic: page.isPublic, brandColor: page.brandColor ?? defaults.brandColor }
+      : defaults,
+    mode: "onBlur",
+  });
+  const isPending = create.isPending || update.isPending;
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && isPending) return;
+    onOpenChange(nextOpen);
+    if (!nextOpen) form.reset(page
+      ? { name: page.name, slug: page.slug, description: page.description ?? "", isPublic: page.isPublic, brandColor: page.brandColor ?? defaults.brandColor }
+      : defaults);
+  }
+
+  function onSubmit(values: StatusPageInput) {
+    const payload: StatusPageInput = {
+      name: values.name.trim(),
+      slug: values.slug.trim().toLowerCase(),
+      description: values.description?.trim() || "",
+      isPublic: values.isPublic,
+      brandColor: values.brandColor,
+    };
+    if (!page) {
+      create.mutate(payload, {
+        onSuccess: () => { toast.success("Status page created"); form.reset(defaults); onOpenChange(false); },
+        onError: (error) => toast.error(error.message),
+      });
+      return;
+    }
+
+    const changed = Object.fromEntries(
+      (Object.keys(payload) as (keyof StatusPageInput)[])
+        .filter((key) => payload[key] !== (key === "description" ? (page.description ?? "") : key === "brandColor" ? (page.brandColor ?? defaults.brandColor) : page[key]))
+        .map((key) => [key, payload[key]]),
+    ) as Partial<StatusPageInput>;
+    if (Object.keys(changed).length === 0) {
+      onOpenChange(false);
+      return;
+    }
+    update.mutate(changed, {
+      onSuccess: () => { toast.success("Status page updated"); onOpenChange(false); },
+      onError: (error) => toast.error(error.message),
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{page ? "Edit status page" : "Create status page"}</DialogTitle>
+          <DialogDescription>Set up the page customers use to follow service health.</DialogDescription>
+        </DialogHeader>
+        <form id="status-page-form" className="space-y-5" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+          <FieldGroup className="gap-4">
+            <Controller name="name" control={form.control} rules={{ required: "Enter a name for this status page.", maxLength: { value: 120, message: "Use 120 characters or fewer." }, validate: (value) => !!value.trim() || "Enter a page name." }} render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-name">Name</FieldLabel><Input {...field} id="status-page-name" placeholder="Acme Status" maxLength={120} aria-invalid={fieldState.invalid} />{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
+            )} />
+            <Controller name="slug" control={form.control} rules={{ required: "Choose a URL name for this page.", maxLength: { value: 100, message: "Use 100 characters or fewer." }, validate: (value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.trim().toLowerCase()) || "Use lowercase letters, numbers, and hyphens." }} render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-slug">Page URL</FieldLabel><Input {...field} id="status-page-slug" placeholder="acme-status" autoCapitalize="none" aria-invalid={fieldState.invalid} onChange={(event) => field.onChange(event.target.value.toLowerCase().replace(/\s+/g, "-"))} /><FieldDescription>Customers will visit /status/{form.watch("slug") || "your-page"}.</FieldDescription>{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
+            )} />
+            <Controller name="description" control={form.control} rules={{ maxLength: { value: 500, message: "Use 500 characters or fewer." } }} render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-description">Description</FieldLabel><Textarea {...field} id="status-page-description" placeholder="Updates about current service health." maxLength={500} aria-invalid={fieldState.invalid} />{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
+            )} />
+            <Controller name="brandColor" control={form.control} rules={{ required: "Choose a brand color.", pattern: { value: /^#[0-9a-fA-F]{6}$/, message: "Enter a six-digit hex color." } }} render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-color">Brand color</FieldLabel><div className="flex items-center gap-3"><Input {...field} id="status-page-color" type="color" className="h-10 w-14 cursor-pointer p-1" aria-label="Choose status page brand color" /><Input value={field.value} onChange={field.onChange} className="max-w-36 font-mono uppercase" aria-label="Brand color hex value" /></div><FieldDescription>Preview this color on the public status page.</FieldDescription>{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
+            )} />
+            <Controller name="isPublic" control={form.control} render={({ field }) => (
+              <Field orientation="horizontal" className="items-start gap-3"><Switch id="status-page-public" checked={field.value} onCheckedChange={field.onChange} onBlur={field.onBlur} ref={field.ref} /><div className="space-y-1"><FieldLabel htmlFor="status-page-public">Publish page</FieldLabel><FieldDescription>Leave this off while you set up the page.</FieldDescription></div></Field>
+            )} />
+          </FieldGroup>
+        </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={isPending} onClick={() => handleOpenChange(false)}>Cancel</Button>
+          <Button type="submit" form="status-page-form" loading={isPending}>{page ? "Save changes" : "Create page"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -78,7 +78,7 @@ export class MonitorsService {
 
   async findAll(organizationId: string) {
     return this.prisma.monitor.findMany({
-      where: { organizationId, isActive: true },
+      where: { organizationId },
       select: monitorSelect,
       orderBy: { createdAt: 'asc' },
     });

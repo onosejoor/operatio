@@ -170,6 +170,11 @@ export function ActiveIncidents({
                   <span className="font-mono text-xs font-semibold text-foreground">
                     Incident #{shortId}
                   </span>
+                  {incident.monitorName && (
+                    <span className="text-xs text-muted-foreground">
+                      {incident.monitorName}
+                    </span>
+                  )}
 
                   {/* Lifecycle status */}
                   <Badge
@@ -311,6 +316,11 @@ export function IncidentHistory({
                           <span className="font-mono text-xs font-semibold text-foreground">
                             Incident #{shortId}
                           </span>
+                          {incident.monitorName && (
+                            <span className="text-xs text-muted-foreground">
+                              {incident.monitorName}
+                            </span>
+                          )}
                           <Badge
                             variant="operational"
                             className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5"
