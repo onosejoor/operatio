@@ -43,7 +43,7 @@ const buttonVariants = cva(
 function Button({
   className,
   variant = "default",
-  size = "default",
+  size = "lg",
   loading = false,
   ...props
 }: ButtonPrimitive.Props & { loading?: boolean } & VariantProps<
@@ -57,8 +57,8 @@ function Button({
         buttonVariants({ variant, size, className }),
         loading && "cursor-wait opacity-70 active:scale-80"
       )}
-      {...props}
       data-loading={loading}
+      {...props}
     >
       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
       {props.children}
