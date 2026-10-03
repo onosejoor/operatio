@@ -31,6 +31,30 @@ export function getOrganizations() {
   );
 }
 
+export function updateProfile(name: string) {
+  return apiFetch<
+    ApiResponse<Pick<AuthUser, "name" | "email" | "emailVerified">>
+  >("/auth/me", { method: "PATCH", body: JSON.stringify({ name }) }).then(
+    (response) => {
+      if (!response.data) throw new Error("Could not update your profile.");
+      return response.data;
+    },
+  );
+}
+
+export function updateOrganization(organizationId: string, name: string) {
+  return apiFetch<ApiResponse<Organization>>(
+    `/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    },
+  ).then((response) => {
+    if (!response.data) throw new Error("Could not update the workspace.");
+    return response.data;
+  });
+}
+
 export function signIn(input: { email: string; password: string }) {
   return apiFetch<ApiResponse<{ memberships: unknown[] }>>("/auth/login", {
     method: "POST",
@@ -38,7 +62,11 @@ export function signIn(input: { email: string; password: string }) {
   });
 }
 
-export function signUp(input: { name: string; email: string; password: string }) {
+export function signUp(input: {
+  name: string;
+  email: string;
+  password: string;
+}) {
   return apiFetch<ApiResponse<{ message: string }>>("/auth/register", {
     method: "POST",
     body: JSON.stringify(input),
@@ -53,10 +81,13 @@ export function verifyEmail(token: string) {
 }
 
 export function resendVerification(email: string) {
-  return apiFetch<ApiResponse<{ message: string }>>("/auth/resend-verification", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
+  return apiFetch<ApiResponse<{ message: string }>>(
+    "/auth/resend-verification",
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    },
+  );
 }
 
 export function signOut() {

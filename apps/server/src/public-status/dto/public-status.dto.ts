@@ -33,6 +33,20 @@ export class PublicStatusPageDto {
   brandColor?: string;
 }
 
+export class PublicMaintenanceWindowDto {
+  @ApiProperty({ example: 'Database upgrade' })
+  title!: string;
+
+  @ApiProperty({ example: 'We will upgrade the primary database cluster.', required: false })
+  description?: string;
+
+  @ApiProperty({ example: '2026-10-04T01:00:00.000Z' })
+  startsAt!: string;
+
+  @ApiProperty({ example: '2026-10-04T02:00:00.000Z' })
+  endsAt!: string;
+}
+
 export class DailyUptimeDto {
   @ApiProperty({ example: '2024-01-15' })
   date!: string;
@@ -157,6 +171,9 @@ export class PublicStatusResponseDto {
 
   @ApiProperty({ type: [PublicIncidentDto] })
   incidents!: PublicIncidentDto[];
+
+  @ApiProperty({ type: [PublicMaintenanceWindowDto] })
+  maintenanceWindows!: PublicMaintenanceWindowDto[];
 
   @ApiProperty({ example: 99.5, required: false, nullable: true })
   aggregateUptime?: number | null;

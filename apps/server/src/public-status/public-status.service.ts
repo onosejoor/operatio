@@ -11,6 +11,7 @@ import {
   MonitorPerformanceStatus,
   DailyUptimeDto,
   MetricsResponseDto,
+  PublicMaintenanceWindowDto,
 } from './dto/public-status.dto';
 
 @Injectable()
@@ -24,9 +25,10 @@ export class PublicStatusService {
       throw new NotFoundException('Status page not found');
     }
 
-    const [monitors, incidents] = await Promise.all([
+    const [monitors, incidents, maintenanceWindows] = await Promise.all([
       this.getPublicMonitors(statusPage.id),
       this.getPublicIncidents(statusPage.id),
+      this.getUpcomingMaintenance(statusPage.id),
     ]);
 
     const overallStatus = this.calculateOverallStatus(monitors);
@@ -46,8 +48,27 @@ export class PublicStatusService {
       status: overallStatus,
       monitors,
       incidents,
+      maintenanceWindows,
       aggregateUptime,
     };
+  }
+
+  private async getUpcomingMaintenance(
+    statusPageId: string,
+  ): Promise<PublicMaintenanceWindowDto[]> {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const windows = await this.prisma.maintenanceWindow.findMany({
+      where: { statusPageId, startsAt: { lte: horizon }, endsAt: { gte: now } },
+      select: { title: true, description: true, startsAt: true, endsAt: true },
+      orderBy: { startsAt: 'asc' },
+    });
+    return windows.map((window) => ({
+      title: window.title,
+      description: window.description ?? undefined,
+      startsAt: window.startsAt.toISOString(),
+      endsAt: window.endsAt.toISOString(),
+    }));
   }
 
   async getStatusPage(slug: string) {
@@ -381,7 +402,9 @@ export class PublicStatusService {
     // Initialize all 90 days ending at today (in UTC)
     const now = new Date();
     for (let i = 89; i >= 0; i--) {
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+      const d = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i),
+      );
       const dateKey = d.toISOString().split('T')[0];
       dailyChecks.set(dateKey, { total: 0, up: 0, failures: 0 });
     }
@@ -402,7 +425,9 @@ export class PublicStatusService {
 
     // Convert to array format in chronological order (oldest to today)
     for (let i = 89; i >= 0; i--) {
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+      const d = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i),
+      );
       const dateKey = d.toISOString().split('T')[0];
       const dayData = dailyChecks.get(dateKey);
 

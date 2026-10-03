@@ -114,6 +114,7 @@ model Organization {
   monitors    Monitor[]
   incidents   Incident[]
   statusPages StatusPage[]
+  maintenanceWindows MaintenanceWindow[]
 
   @@map("organizations")
 }
@@ -307,6 +308,7 @@ model StatusPage {
 
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   statusPageMonitors StatusPageMonitor[]
+  maintenanceWindows MaintenanceWindow[]
 
   @@index([organizationId])
   @@map("status_pages")
@@ -326,6 +328,25 @@ model StatusPageMonitor {
   @@index([statusPageId])
   @@index([monitorId])
   @@map("status_page_monitors")
+}
+
+model MaintenanceWindow {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String   @db.ObjectId
+  statusPageId   String   @db.ObjectId
+  title          String
+  description    String?
+  startsAt       DateTime
+  endsAt         DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  statusPage   StatusPage   @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startsAt])
+  @@index([statusPageId, startsAt])
+  @@map("maintenance_windows")
 }
 
 model Token {

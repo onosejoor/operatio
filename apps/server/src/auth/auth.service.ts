@@ -118,6 +118,14 @@ export class AuthService {
     return user;
   }
 
+  async updateProfile(id: string, name: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { name: name.trim() },
+      select: { name: true, email: true, emailVerified: true },
+    });
+  }
+
   async resendVerification(email: string) {
     const normalizedEmail = email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({

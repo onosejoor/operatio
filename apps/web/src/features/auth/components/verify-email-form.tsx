@@ -3,18 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@operatio/ui/components/ui/button";
 import { Card } from "@operatio/ui/components/ui/card";
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
-import { authKeys } from "../hooks/auth-queries";
-import { resendVerification, verifyEmail } from "../api/auth";
+import {
+  useResendVerificationMutation,
+  useVerifyEmailMutation,
+} from "../hooks/auth-mutations";
 
 export function VerifyEmailForm() {
   const params = useSearchParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const token = params.get("token")?.trim() ?? "";
   const needsVerification = params.get("reason") === "unverified";
   const attemptedToken = useRef<string | null>(null);
@@ -24,29 +24,19 @@ export function VerifyEmailForm() {
     mutate: verifyToken,
     isPending: isVerifying,
     isError: verificationFailed,
-  } = useMutation({
-    mutationFn: verifyEmail,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: authKeys.user });
-      router.replace("/dashboard");
-    },
-    onError: (error) => toast.error(error.message),
-  });
-  const resend = useMutation({
-    mutationFn: resendVerification,
-    onSuccess: (response) =>
-      toast.success(
-        response.message ??
-          "If the account exists, a verification email has been sent.",
-      ),
-    onError: (error) => toast.error(error.message),
-  });
+  } = useVerifyEmailMutation();
+  const resend = useResendVerificationMutation();
 
   useEffect(() => {
     if (!token || attemptedToken.current === token) return;
     attemptedToken.current = token;
-    verifyToken(token);
-  }, [token, verifyToken]);
+    verifyToken(token, {
+      onSuccess: () => {
+        router.replace("/dashboard");
+      },
+      onError: (error) => toast.error(error.message),
+    });
+  }, [token, verifyToken, router]);
 
   const verificationMessage = !token
     ? needsVerification
@@ -55,6 +45,17 @@ export function VerifyEmailForm() {
     : verificationFailed
       ? "This verification link could not be used. It may be invalid or expired. Request a new link below."
       : "Verifying your email…";
+
+  function handleResend() {
+    resend.mutate(email.trim(), {
+      onSuccess: (response) =>
+        toast.success(
+          response.message ??
+            "If the account exists, a verification email has been sent.",
+        ),
+      onError: (error) => toast.error(error.message),
+    });
+  }
 
   return (
     <div className="space-y-5">
@@ -106,7 +107,7 @@ export function VerifyEmailForm() {
           variant="outline"
           loading={resend.isPending}
           disabled={!/^\S+@\S+\.\S+$/.test(email)}
-          onClick={() => resend.mutate(email.trim())}
+          onClick={handleResend}
         >
           {resend.isPending ? "Sending…" : "Resend verification email"}
         </Button>

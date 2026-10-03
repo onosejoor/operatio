@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@operatio/ui/components/ui/button";
 import {
@@ -13,7 +12,7 @@ import {
 } from "@operatio/ui/components/ui/field";
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
-import { signUp } from "../api/auth";
+import { useSignUpMutation } from "../hooks/auth-mutations";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 
@@ -43,15 +42,19 @@ export function SignUpForm() {
     mode: "onTouched",
   });
 
-  const mutation = useMutation({
-    mutationFn: signUp,
-    onSuccess: (_, values) =>
-      router.push(`/verify-email?email=${encodeURIComponent(values.email)}`),
-    onError: (error) => toast.error(error.message),
-  });
+  const mutation = useSignUpMutation();
 
   function onSubmit({ name, email, password }: SignUpValues) {
-    mutation.mutate({ name: name.trim(), email: email.trim(), password });
+    mutation.mutate(
+      { name: name.trim(), email: email.trim(), password },
+      {
+        onSuccess: (_, values) =>
+          router.push(
+            `/verify-email?email=${encodeURIComponent(values.email)}`,
+          ),
+        onError: (error) => toast.error(error.message),
+      },
+    );
   }
 
   return (

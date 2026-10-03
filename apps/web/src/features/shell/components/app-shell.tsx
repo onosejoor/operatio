@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  CalendarClock,
   Check,
   ChevronsUpDown,
   LayoutDashboard,
@@ -47,7 +47,7 @@ import {
   useCurrentUser,
   useOrganizations,
 } from "@app/features/auth/hooks/auth-queries";
-import { signOut } from "@app/features/auth/api/auth";
+import { useSignOutMutation } from "@app/features/auth/hooks/auth-mutations";
 import { ApiError } from "@app/lib/api/client";
 
 const primaryLinks = [
@@ -57,7 +57,10 @@ const primaryLinks = [
   { label: "Status pages", path: "/status-pages", icon: PanelTop },
 ];
 
-const manageLinks = [{ label: "Settings", path: "/settings", icon: Settings2 }];
+const manageLinks = [
+  { label: "Maintenance", path: "/maintenance", icon: CalendarClock },
+  { label: "Settings", path: "/settings", icon: Settings2 },
+];
 
 const allLinks = [...primaryLinks, ...manageLinks];
 
@@ -268,7 +271,7 @@ function AppSidebar({
 
         <SidebarGroup>
           <SidebarGroupLabel>Manage</SidebarGroupLabel>
-          <SidebarMenu>
+          <SidebarMenu className="gap-2.5">
             {manageLinks.map(({ label, path, icon: Icon }) => {
               const href = `${dashboardPath}${path}`;
               return (
@@ -311,7 +314,6 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const user = useCurrentUser();
   const organizations = useOrganizations(!!user.data);
   const organization = organizations.data?.find(
@@ -337,14 +339,7 @@ export function AppShell({
     router,
   ]);
 
-  const logout = useMutation({
-    mutationFn: signOut,
-    onSuccess: () => {
-      queryClient.clear();
-      router.replace("/sign-in");
-    },
-    onError: (error) => toast.error(error.message),
-  });
+  const logout = useSignOutMutation();
 
   if (
     user.isPending ||
@@ -406,7 +401,12 @@ export function AppShell({
         organizationName={organizationName}
         user={user.data}
         isLoggingOut={logout.isPending}
-        onLogout={() => logout.mutate()}
+        onLogout={() =>
+          logout.mutate(undefined, {
+            onSuccess: () => router.replace("/sign-in"),
+            onError: (error) => toast.error(error.message),
+          })
+        }
       />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur">

@@ -41,36 +41,10 @@ import {
   monitorColumns,
   MonitorSummaryCard,
 } from "@app/features/monitors/components/monitor-presentational";
+import { LoaderDisplay } from "@operatio/ui/components/loader-display";
 
 function OverviewSkeleton() {
-  return (
-    <div className="mx-auto max-w-6xl space-y-6" aria-busy="true">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="mt-2 h-8 w-12" />
-            </CardHeader>
-            <CardFooter>
-              <Skeleton className="h-3 w-28" />
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="mt-2 h-3 w-56" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-10 w-full" />
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <LoaderDisplay fullScreen message="Loading dshboard" />;
 }
 
 // --- Main Overview Component ---

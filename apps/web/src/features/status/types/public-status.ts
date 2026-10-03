@@ -75,6 +75,12 @@ export interface PublicStatusResponse {
   status: OverallStatus;
   monitors: PublicMonitor[];
   incidents: PublicIncident[];
+  maintenanceWindows?: Array<{
+    title: string;
+    description?: string;
+    startsAt: string;
+    endsAt: string;
+  }>;
   aggregateUptime?: number | null;
 }
 

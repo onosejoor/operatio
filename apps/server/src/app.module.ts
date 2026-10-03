@@ -11,6 +11,7 @@ import { PrismaModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { MonitorsModule } from './monitors/monitors.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { QueuesModule } from './queues/queues.module';
 import { RedisModule } from './redis/redis.module';
@@ -31,6 +32,7 @@ import { CommonGuardsModule } from './common/guards/common-guards.module';
     HealthModule,
     AuthModule,
     OrganizationsModule,
+    MaintenanceModule,
     MonitorsModule,
     IncidentsModule,
     StatusPagesModule,

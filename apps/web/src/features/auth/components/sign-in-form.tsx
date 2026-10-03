@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@operatio/ui/components/ui/button";
 import {
@@ -14,7 +13,8 @@ import {
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { ApiError } from "@app/lib/api/client";
-import { getOrganizations, signIn } from "../api/auth";
+import { getOrganizations } from "../api/auth";
+import { useSignInMutation } from "../hooks/auth-mutations";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 
@@ -32,53 +32,59 @@ export function SignInForm() {
     mode: "onTouched",
   });
 
-  const mutation = useMutation({
-    mutationFn: signIn,
-    onSuccess: async () => {
-      const next = params.get("next");
-      if (next?.startsWith("/") && !next.startsWith("//")) {
-        router.replace(next);
+  const mutation = useSignInMutation();
+
+  async function handleSignInSuccess() {
+    const next = params.get("next");
+    if (next?.startsWith("/") && !next.startsWith("//")) {
+      router.replace(next);
+      return;
+    }
+
+    try {
+      const organizations = await getOrganizations();
+      const organization = organizations[0];
+      if (!organization) {
+        toast.error("Your account is not a member of an organization yet.");
         return;
       }
 
-      try {
-        const organizations = await getOrganizations();
-        const organization = organizations[0];
-        if (!organization) {
-          toast.error("Your account is not a member of an organization yet.");
-          return;
-        }
+      router.replace(`/${encodeURIComponent(organization.slug)}/dashboard`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to load your workspace.",
+      );
+    }
+  }
 
-        router.replace(`/${encodeURIComponent(organization.slug)}/dashboard`);
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Unable to load your workspace.",
-        );
-      }
-    },
-    onError: (error, values) => {
-      if (
-        error instanceof ApiError &&
-        (error.body as { code?: string } | undefined)?.code ===
-          "EMAIL_NOT_VERIFIED"
-      ) {
-        toast.info(
-          "Your email needs verification. You can resend the link there.",
-        );
-        router.replace(
-          `/verify-email?email=${encodeURIComponent(values.email)}&reason=unverified`,
-        );
-        return;
-      }
+  function handleSignInError(error: Error, values: SignInValues) {
+    if (
+      error instanceof ApiError &&
+      (error.body as { code?: string } | undefined)?.code ===
+        "EMAIL_NOT_VERIFIED"
+    ) {
+      toast.info(
+        "Your email needs verification. You can resend the link there.",
+      );
+      router.replace(
+        `/verify-email?email=${encodeURIComponent(values.email)}&reason=unverified`,
+      );
+      return;
+    }
 
-      toast.error(error.message);
-    },
-  });
+    toast.error(error.message);
+  }
 
   function onSubmit({ email, password }: SignInValues) {
-    mutation.mutate({ email: email.trim(), password });
+    mutation.mutate(
+      { email: email.trim(), password },
+      {
+        onSuccess: handleSignInSuccess,
+        onError: (error, values) => handleSignInError(error, values),
+      },
+    );
   }
 
   return (
