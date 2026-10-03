@@ -14,7 +14,7 @@ import {
 } from "@operatio/ui/components/dialog";
 import { Button } from "@operatio/ui/components/ui/button";
 import { Badge } from "@operatio/ui/components/ui/badge";
-import { Activity, Clock, Gauge, Globe, CheckCircle2 } from "lucide-react";
+import { Activity, Gauge, Globe, CheckCircle2 } from "lucide-react";
 
 interface ServiceDetailsDialogProps {
   monitor: PublicMonitor | null;

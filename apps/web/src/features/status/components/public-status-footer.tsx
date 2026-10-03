@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { useParams } from "next/navigation";
 
-export function PublicStatusFooter() {
+export function PublicStatusFooter({
+  statusPageName,
+}: {
+  statusPageName?: string;
+}) {
   const [utcTime, setUtcTime] = useState<string>("");
   const { slug } = useParams<{ slug: string }>();
 
-  let statusPageName = slug;
+  const pageName = statusPageName ?? slug;
   // if (!window) {
   //   statusPageName = window?.location.href.split(".")[0];
   // } else {
@@ -36,7 +40,7 @@ export function PublicStatusFooter() {
             </span>
           </div>
           <span className="text-border">·</span>
-          <span className="capitalize">{statusPageName} Status</span>
+          <span className="capitalize">{pageName} Status</span>
         </div>
 
         <div className="flex items-center gap-4 text-xs">

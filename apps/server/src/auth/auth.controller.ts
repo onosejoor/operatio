@@ -116,6 +116,11 @@ export class AuthController {
     description: 'Invalid credentials',
     type: ApiResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Email address must be verified before login',
+    type: ApiResponseDto,
+  })
   @ApiBody({ type: LoginDto })
   async login(
     @Body() loginDto: LoginDto,
