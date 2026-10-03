@@ -190,7 +190,7 @@ function AppSidebar({
                 width={150}
                 height={30}
                 priority
-                className="shrink-0 object-contain"
+                className="shrink-0 dark:invert object-contain"
               />
             </SidebarMenuButton>
           </SidebarMenuItem>

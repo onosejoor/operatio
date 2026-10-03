@@ -13,6 +13,49 @@ export interface MonitorSummary {
   lastResponseTimeMs: number | null;
 }
 
+export interface MonitorDetail extends MonitorSummary {
+  timeout: number;
+  isPublic: boolean;
+  nextCheckAt: string | null;
+}
+
+export interface MonitorCheck {
+  id: string;
+  status: MonitorSummary["status"];
+  statusCode: number | null;
+  responseTimeMs: number;
+  checkedAt: string;
+  error: string | null;
+}
+
+export interface MonitorChecksPage {
+  checks: MonitorCheck[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export interface MonitorStats {
+  checkSuccessRate: number;
+  averageResponseTime: number;
+  totalChecks: number;
+  successfulChecks: number;
+  failedChecks: number;
+  latestStatus: MonitorSummary["status"];
+}
+
+export interface CreateMonitorInput {
+  name: string;
+  url: string;
+  interval: number;
+  timeout: number;
+  isPublic: boolean;
+}
+
+export interface UpdateMonitorInput extends Partial<CreateMonitorInput> {
+  isActive?: boolean;
+}
+
+export type MonitorCheckSort = "newest" | "oldest" | "slowest";
+
 export interface IncidentSummary {
   id: string;
   monitorId: string;
@@ -24,6 +67,71 @@ export function getMonitors(organizationId: string) {
   return apiFetch<ApiResponse<MonitorSummary[]>>(
     `/organizations/${organizationId}/monitors`,
   ).then((response) => response.data ?? []);
+}
+
+export function getMonitor(organizationId: string, monitorId: string) {
+  return apiFetch<ApiResponse<MonitorDetail>>(
+    `/organizations/${organizationId}/monitors/${monitorId}`,
+  ).then((response) => {
+    if (!response.data) throw new Error("The monitor could not be loaded.");
+    return response.data;
+  });
+}
+
+export function getMonitorChecks(
+  organizationId: string,
+  monitorId: string,
+  page = 1,
+  limit = 10,
+  status?: MonitorSummary["status"],
+  sort: MonitorCheckSort = "newest",
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sort,
+  });
+  if (status) params.set("status", status);
+
+  return apiFetch<ApiResponse<MonitorChecksPage>>(
+    `/organizations/${organizationId}/monitors/${monitorId}/checks?${params}`,
+  ).then((response) => {
+    if (!response.data) throw new Error("Monitor history could not be loaded.");
+    return response.data;
+  });
+}
+
+export function updateMonitor(
+  organizationId: string,
+  monitorId: string,
+  input: UpdateMonitorInput,
+) {
+  return apiFetch<ApiResponse<void>>(
+    `/organizations/${organizationId}/monitors/${monitorId}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+}
+
+export function getMonitorStats(organizationId: string, monitorId: string) {
+  return apiFetch<ApiResponse<MonitorStats>>(
+    `/organizations/${organizationId}/monitors/${monitorId}/stats`,
+  ).then((response) => {
+    if (!response.data) throw new Error("Monitor statistics could not be loaded.");
+    return response.data;
+  });
+}
+
+export function createMonitor(
+  organizationId: string,
+  input: CreateMonitorInput,
+) {
+  return apiFetch<ApiResponse<{ id: string }>>(
+    `/organizations/${organizationId}/monitors`,
+    { method: "POST", body: JSON.stringify(input) },
+  ).then((response) => {
+    if (!response.data) throw new Error("The monitor could not be created.");
+    return response.data;
+  });
 }
 
 export function getIncidents(organizationId: string) {

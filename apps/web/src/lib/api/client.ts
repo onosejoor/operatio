@@ -41,6 +41,13 @@ const apiClient = axios.create({
 });
 
 let refreshRequest: Promise<void> | null = null;
+let signInRedirectStarted = false;
+
+function redirectToSignIn() {
+  if (typeof window === "undefined" || signInRedirectStarted) return;
+  signInRedirectStarted = true;
+  window.location.replace("/sign-in");
+}
 
 function shouldSkipRefresh(url = "") {
   return [
@@ -70,8 +77,16 @@ apiClient.interceptors.response.use(
     config._retryAfterRefresh = true;
     try {
       refreshRequest ??= axios
-        .post(`${API_URL}/auth/refresh`, undefined, { withCredentials: true })
-        .then(() => undefined)
+        .post<{ status?: string; message?: string }>(
+          `${API_URL}/auth/refresh`,
+          undefined,
+          { withCredentials: true },
+        )
+        .then((response) => {
+          if (response.data?.status === "error") {
+            throw new Error(response.data.message || "Session refresh failed");
+          }
+        })
         .finally(() => {
           refreshRequest = null;
         });
@@ -79,6 +94,7 @@ apiClient.interceptors.response.use(
       await refreshRequest;
       return await apiClient.request(config);
     } catch (refreshError) {
+      redirectToSignIn();
       return Promise.reject(refreshError);
     }
   },

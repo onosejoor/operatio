@@ -7,7 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-heading: var(--font-manrope, var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif));
   --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
   --font-mono: var(--font-jetbrains-mono, ui-monospace, monospace);
   --font-fira: var(--font-fira-code, ui-monospace, monospace);
@@ -121,6 +121,7 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-card: var(--card-shadow);
 }
 
 /* ===========================================================
@@ -145,10 +146,10 @@
    =========================================================== */
 
 :root {
-  --background: oklch(0.972 0.004 255);
+  --background: oklch(0.966 0.006 255);
   --foreground: oklch(0.22 0.025 258);
 
-  --card: oklch(1 0 0);
+  --card: oklch(0.998 0.002 255);
   --card-foreground: oklch(0.22 0.025 258);
 
   --popover: oklch(1 0 0);
@@ -175,8 +176,8 @@
   --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(0.985 0 0);
 
-  --border: oklch(0.9 0.008 255);
-  --input: oklch(0.9 0.008 255);
+  --border: oklch(0.89 0.01 255);
+  --input: oklch(0.89 0.01 255);
   --ring: oklch(0.54 0.205 263 / 0.55);
 
   /* Charts — distinct hues, safe without relying on red vs green */
@@ -229,6 +230,9 @@
   --status-paused-text: oklch(0.45 0.025 258);
 
   --radius: 0.5rem;
+  --card-shadow:
+    0 1px 2px oklch(0.22 0.025 258 / 0.045),
+    0 8px 24px oklch(0.22 0.025 258 / 0.035);
 
   --font-mono:
     "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -275,6 +279,9 @@
   --border: oklch(1 0 0 / 0.09);
   --input: oklch(1 0 0 / 0.12);
   --ring: oklch(0.68 0.17 265 / 0.6);
+  --card-shadow:
+    0 1px 2px oklch(0 0 0 / 0.18),
+    0 10px 28px oklch(0 0 0 / 0.16);
 
   --chart-1: oklch(0.68 0.17 265);
   --chart-2: oklch(0.78 0.12 190);

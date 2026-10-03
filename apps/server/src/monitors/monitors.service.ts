@@ -188,6 +188,8 @@ export class MonitorsService {
     limit: number = 50,
     fromDate?: string,
     toDate?: string,
+    status?: MonitorStatus,
+    sort: 'newest' | 'oldest' | 'slowest' = 'newest',
   ) {
     const monitor = await this.prisma.monitor.findFirst({
       where: { id: monitorId, organizationId },
@@ -208,7 +210,11 @@ export class MonitorsService {
       dateFilter.lte = new Date(toDate);
     }
 
-    const whereClause: Prisma.MonitorCheckWhereInput = { monitorId };
+    const whereClause: Prisma.MonitorCheckWhereInput = {
+      monitorId,
+      organizationId,
+      ...(status ? { status } : {}),
+    };
     if (Object.keys(dateFilter).length > 0) {
       whereClause.checkedAt = dateFilter;
     }
@@ -216,7 +222,10 @@ export class MonitorsService {
     const [checks, total] = await Promise.all([
       this.prisma.monitorCheck.findMany({
         where: whereClause,
-        orderBy: { checkedAt: 'desc' },
+        orderBy:
+          sort === 'slowest'
+            ? { responseTimeMs: 'desc' }
+            : { checkedAt: sort === 'oldest' ? 'asc' : 'desc' },
         select: {
           id: true,
           status: true,
@@ -253,13 +262,50 @@ export class MonitorsService {
       throw new NotFoundException('Monitor not found');
     }
 
-    const checks = await this.prisma.monitorCheck.findMany({
-      where: { monitorId },
-      orderBy: { checkedAt: 'desc' },
-      take: 1000,
+    const result = await this.prisma.$runCommandRaw({
+      aggregate: 'monitor_checks',
+      pipeline: [
+        {
+          $match: {
+            monitorId: { $oid: monitorId },
+            organizationId: { $oid: organizationId },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalChecks: { $sum: 1 },
+            successfulChecks: {
+              $sum: {
+                $cond: [{ $eq: ['$status', MonitorStatus.UP] }, 1, 0],
+              },
+            },
+            failedChecks: {
+              $sum: {
+                $cond: [{ $eq: ['$status', MonitorStatus.DOWN] }, 1, 0],
+              },
+            },
+            averageResponseTime: { $avg: '$responseTimeMs' },
+          },
+        },
+      ],
+      cursor: {},
     });
 
-    if (checks.length === 0) {
+    const aggregate = (
+      result as unknown as {
+        cursor?: {
+          firstBatch?: Array<{
+            totalChecks: number;
+            successfulChecks: number;
+            failedChecks: number;
+            averageResponseTime: number | null;
+          }>;
+        };
+      }
+    ).cursor?.firstBatch?.[0];
+
+    if (!aggregate || aggregate.totalChecks === 0) {
       return {
         checkSuccessRate: 0,
         averageResponseTime: 0,
@@ -270,21 +316,14 @@ export class MonitorsService {
       };
     }
 
-    const successfulChecks = checks.filter(
-      (check) => check.status === MonitorStatus.UP,
-    ).length;
-    const failedChecks = checks.filter(
-      (check) => check.status === MonitorStatus.DOWN,
-    ).length;
-    const checkSuccessRate = (successfulChecks / checks.length) * 100;
-    const averageResponseTime =
-      checks.reduce((sum, check) => sum + check.responseTimeMs, 0) /
-      checks.length;
+    const { totalChecks, successfulChecks, failedChecks } = aggregate;
+    const checkSuccessRate = (successfulChecks / totalChecks) * 100;
+    const averageResponseTime = aggregate.averageResponseTime ?? 0;
 
     return {
       checkSuccessRate: Math.round(checkSuccessRate * 100) / 100,
       averageResponseTime: Math.round(averageResponseTime),
-      totalChecks: checks.length,
+      totalChecks,
       successfulChecks,
       failedChecks,
       latestStatus: monitor.status,

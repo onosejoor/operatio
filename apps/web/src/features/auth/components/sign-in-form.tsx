@@ -14,7 +14,7 @@ import {
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { ApiError } from "@app/lib/api/client";
-import { signIn } from "../api/auth";
+import { getOrganizations, signIn } from "../api/auth";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 
@@ -34,11 +34,27 @@ export function SignInForm() {
 
   const mutation = useMutation({
     mutationFn: signIn,
-    onSuccess: () => {
+    onSuccess: async () => {
       const next = params.get("next");
-      router.replace(
-        next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard",
-      );
+      if (next?.startsWith("/") && !next.startsWith("//")) {
+        router.replace(next);
+        return;
+      }
+
+      try {
+        const organizations = await getOrganizations();
+        const organization = organizations[0];
+        if (!organization) {
+          toast.error("Your account is not a member of an organization yet.");
+          return;
+        }
+
+        router.replace(`/${encodeURIComponent(organization.slug)}/dashboard`);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Unable to load your workspace.",
+        );
+      }
     },
     onError: (error, values) => {
       if (

@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
 import {
   Activity,
   CircleAlert,
   Clock3,
+  Plus,
   Server,
   ShieldCheck,
 } from "lucide-react";
@@ -36,149 +36,11 @@ import {
 } from "@app/features/monitors/hooks/dashboard-queries";
 import type { MonitorSummary } from "@app/features/monitors/api/monitors";
 import { ResourceView } from "@operatio/ui/components/resource-view";
-import type { Column } from "@operatio/ui/components/resource-view";
-import { cn } from "@operatio/ui/lib/utils";
-
-// --- Generic Resource View Component ---
-
-type MonitorStatus =
-  | "operational"
-  | "degraded"
-  | "outage"
-  | "maintenance"
-  | "paused";
-
-const STATUS: Record<
-  MonitorStatus,
-  { label: string; dot: string; badge: string }
-> = {
-  operational: {
-    label: "Operational",
-    dot: "bg-status-operational",
-    badge: "bg-status-operational-muted text-status-operational-text",
-  },
-  degraded: {
-    label: "Degraded",
-    dot: "bg-status-degraded",
-    badge: "bg-status-degraded-muted text-status-degraded-text",
-  },
-  outage: {
-    label: "Down",
-    dot: "bg-status-outage",
-    badge: "bg-status-outage-muted text-status-outage-text",
-  },
-  maintenance: {
-    label: "Maintenance",
-    dot: "bg-status-maintenance",
-    badge: "bg-status-maintenance-muted text-status-maintenance-text",
-  },
-  paused: {
-    label: "Paused",
-    dot: "bg-status-paused",
-    badge: "bg-status-paused-muted text-status-paused-text",
-  },
-};
-
-function getMonitorStatus(status: MonitorSummary["status"]): MonitorStatus {
-  if (status === "UP") return "operational";
-  if (status === "DOWN") return "outage";
-  return "paused";
-}
-
-function MonitorState({ status }: { status: MonitorSummary["status"] }) {
-  const monitorStatus = getMonitorStatus(status);
-  const config = STATUS[monitorStatus];
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-        config.badge,
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-1.5 rounded-full",
-          config.dot,
-          monitorStatus === "outage" && "status-pulse",
-        )}
-      />
-      {config.label}
-    </span>
-  );
-}
-
-const SLOW_MS = 1000;
-const VERY_SLOW_MS = 2000;
-const MAX_MS = 3000;
-
-function latencyTone(ms: number) {
-  if (ms >= VERY_SLOW_MS)
-    return { text: "text-status-outage-text", bar: "bg-status-outage" };
-  if (ms >= SLOW_MS)
-    return { text: "text-status-degraded-text", bar: "bg-status-degraded" };
-  return { text: "text-foreground", bar: "bg-status-operational" };
-}
-
-function ResponseCell({
-  ms,
-  http,
-}: {
-  ms: number | null;
-  http: number | null;
-}) {
-  if (ms === null) {
-    return <span className="text-sm text-muted-foreground">No data</span>;
-  }
-
-  const tone = latencyTone(ms);
-  const isError = http !== null && http >= 400;
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-20 shrink-0">
-        <span
-          className={cn("font-mono text-sm font-medium tabular-nums", tone.text)}
-        >
-          {ms.toLocaleString()} ms
-        </span>
-        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
-          <div
-            aria-hidden="true"
-            className={cn("h-full rounded-full", tone.bar)}
-            style={{ width: `${Math.min(ms / MAX_MS, 1) * 100}%` }}
-          />
-        </div>
-      </div>
-      {http !== null && (
-        <span
-          className={cn(
-            "rounded px-1.5 py-0.5 font-mono text-xs",
-            isError
-              ? "bg-status-outage-muted text-status-outage-text"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
-          {http}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function checkedAgo(value: string | null) {
-  if (!value) return "Not checked yet";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Last check time unavailable";
-  return formatDistanceToNow(date, { addSuffix: true });
-}
-
-function responseLabel(monitor: MonitorSummary) {
-  return monitor.lastResponseTimeMs === null
-    ? "—"
-    : `${monitor.lastResponseTimeMs} ms`;
-}
+import { AddMonitorDialog } from "@app/features/monitors/components/add-monitor-dialog";
+import {
+  monitorColumns,
+  MonitorSummaryCard,
+} from "@app/features/monitors/components/monitor-presentational";
 
 function OverviewSkeleton() {
   return (
@@ -214,8 +76,8 @@ function OverviewSkeleton() {
 // --- Main Overview Component ---
 
 export function Overview({ orgSlug }: { orgSlug: string }) {
+  const [addMonitorOpen, setAddMonitorOpen] = useState(false);
   const organizations = useOrganizations();
-  const dashboardPath = `/${encodeURIComponent(orgSlug)}/dashboard`;
   const organizationId = organizations.data?.find(
     (organization) => organization.slug === orgSlug,
   )?.id;
@@ -310,44 +172,6 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
     },
   ];
 
-  const columns: Column<MonitorSummary>[] = [
-    {
-      header: "Monitor",
-      className: "pl-6",
-      cell: (monitor) => (
-        <div className="max-w-0 sm:max-w-xs">
-          <div className="truncate font-medium">{monitor.name}</div>
-          <div className="truncate font-mono text-xs text-muted-foreground">
-            {monitor.url}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground sm:hidden">
-            {responseLabel(monitor)} · {checkedAgo(monitor.lastCheckedAt)}
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: "Status",
-      cell: (monitor) => <MonitorState status={monitor.status} />,
-    },
-    {
-      header: "Response",
-      className: "hidden sm:table-cell",
-      cell: (monitor) => (
-        <ResponseCell
-          ms={monitor.lastResponseTimeMs}
-          http={monitor.lastStatusCode}
-        />
-      ),
-    },
-    {
-      header: "Last checked",
-      className:
-        "hidden pr-6 text-right font-mono text-muted-foreground md:table-cell",
-      cell: (monitor) => checkedAgo(monitor.lastCheckedAt),
-    },
-  ];
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <p className="text-sm text-muted-foreground">
@@ -382,21 +206,17 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
             </CardDescription>
           </div>
 
-          {monitorList.length > 0 && (
-            <Button
-              className="w-fit"
-              render={<Link href={`${dashboardPath}/monitors`} />}
-            >
-              View all
-            </Button>
-          )}
+          <Button className="w-fit" onClick={() => setAddMonitorOpen(true)}>
+            <Plus />
+            Add monitor
+          </Button>
         </CardHeader>
 
         <CardContent className="p-0">
           <ResourceView<MonitorSummary>
             data={monitorList}
             keyExtractor={(monitor) => monitor.id}
-            columns={columns}
+            columns={monitorColumns}
             defaultViewMode="cards"
             emptyState={
               <Empty>
@@ -410,43 +230,13 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
-                  <Button
-                    nativeButton={false}
-                    render={<Link href={`${dashboardPath}/monitors`} />}
-                  >
-                    Go to monitors
+                  <Button onClick={() => setAddMonitorOpen(true)}>
+                    Add your first monitor
                   </Button>
                 </EmptyContent>
               </Empty>
             }
-            renderCard={(monitor) => (
-              <Card key={monitor.id} className="flex flex-col justify-between">
-                <CardHeader className="space-y-1.5 pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="truncate text-base font-semibold">
-                      {monitor.name}
-                    </CardTitle>
-                    <MonitorState status={monitor.status} />
-                  </div>
-                  <CardDescription className="truncate text-xs">
-                    {monitor.url}
-                  </CardDescription>
-                </CardHeader>
-                <CardFooter className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                  <span className="font-mono tabular-nums">
-                    {responseLabel(monitor)}
-                    {monitor.lastStatusCode !== null && (
-                      <span className="ml-1 text-muted-foreground/80">
-                        ({monitor.lastStatusCode})
-                      </span>
-                    )}
-                  </span>
-                  <span className="font-mono">
-                    {checkedAgo(monitor.lastCheckedAt)}
-                  </span>
-                </CardFooter>
-              </Card>
-            )}
+            renderCard={(monitor) => <MonitorSummaryCard monitor={monitor} />}
           />
         </CardContent>
 
@@ -459,6 +249,11 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
           </CardFooter>
         )}
       </Card>
+      <AddMonitorDialog
+        organizationId={organizationId}
+        open={addMonitorOpen}
+        onOpenChange={setAddMonitorOpen}
+      />
     </div>
   );
 }
