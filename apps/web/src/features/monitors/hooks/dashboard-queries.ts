@@ -26,7 +26,8 @@ export const monitorKeys = {
     page: number,
     status?: MonitorSummary["status"],
     sort?: MonitorCheckSort,
-  ) => ["monitors", organizationId, monitorId, "checks", page, status, sort] as const,
+    fromDate?: string,
+  ) => ["monitors", organizationId, monitorId, "checks", page, status, sort, fromDate] as const,
   stats: (organizationId: string, monitorId: string) =>
     ["monitors", organizationId, monitorId, "stats"] as const,
   incidents: (organizationId: string) => ["incidents", organizationId] as const,
@@ -62,10 +63,11 @@ export function useMonitorChecks(
   page = 1,
   status?: MonitorSummary["status"],
   sort: MonitorCheckSort = "newest",
+  fromDate?: string,
 ) {
   return useQuery({
-    queryKey: monitorKeys.checks(organizationId ?? "", monitorId ?? "", page, status, sort),
-    queryFn: () => getMonitorChecks(organizationId!, monitorId!, page, 10, status, sort),
+    queryKey: monitorKeys.checks(organizationId ?? "", monitorId ?? "", page, status, sort, fromDate),
+    queryFn: () => getMonitorChecks(organizationId!, monitorId!, page, 10, status, sort, fromDate),
     enabled: !!organizationId && !!monitorId,
   });
 }

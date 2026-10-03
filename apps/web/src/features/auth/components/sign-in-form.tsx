@@ -10,7 +10,7 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@operatio/ui/components/field";
+} from "@operatio/ui/components/ui/field";
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { ApiError } from "@app/lib/api/client";
@@ -52,7 +52,9 @@ export function SignInForm() {
         router.replace(`/${encodeURIComponent(organization.slug)}/dashboard`);
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Unable to load your workspace.",
+          error instanceof Error
+            ? error.message
+            : "Unable to load your workspace.",
         );
       }
     },

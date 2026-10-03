@@ -25,7 +25,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@operatio/ui/components/empty";
+} from "@operatio/ui/components/ui/empty";
 import { Skeleton } from "@operatio/ui/components/ui/skeleton";
 
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
@@ -36,7 +36,7 @@ import {
 } from "@app/features/monitors/hooks/dashboard-queries";
 import type { MonitorSummary } from "@app/features/monitors/api/monitors";
 import { ResourceView } from "@operatio/ui/components/resource-view";
-import { AddMonitorDialog } from "@app/features/monitors/components/add-monitor-dialog";
+import { MonitorDialog } from "@app/features/monitors/components/monitor-dialog";
 import {
   monitorColumns,
   MonitorSummaryCard,
@@ -249,7 +249,7 @@ export function Overview({ orgSlug }: { orgSlug: string }) {
           </CardFooter>
         )}
       </Card>
-      <AddMonitorDialog
+      <MonitorDialog
         organizationId={organizationId}
         open={addMonitorOpen}
         onOpenChange={setAddMonitorOpen}

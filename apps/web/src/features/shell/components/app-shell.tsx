@@ -15,17 +15,17 @@ import {
   Settings2,
   ShieldAlert,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@operatio/ui/components/avatar";
+import { Avatar, AvatarFallback } from "@operatio/ui/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@operatio/ui/components/dropdown-menu";
+} from "@operatio/ui/components/ui/dropdown-menu";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
-import { Separator } from "@operatio/ui/components/separator";
+import { Separator } from "@operatio/ui/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -41,7 +41,7 @@ import {
   SidebarRail,
   SidebarTrigger,
   useSidebar,
-} from "@operatio/ui/components/sidebar";
+} from "@operatio/ui/components/ui/sidebar";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import {
   useCurrentUser,

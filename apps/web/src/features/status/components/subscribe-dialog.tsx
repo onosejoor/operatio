@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@operatio/ui/components/dialog";
+} from "@operatio/ui/components/ui/dialog";
 
 interface SubscribeDialogProps {
   isOpen: boolean;
@@ -46,7 +46,8 @@ export function SubscribeDialog({
             Notification Subscriptions Coming Soon
           </p>
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-            Automated alerts via email, webhook, and SMS will be enabled in an upcoming release.
+            Automated alerts via email, webhook, and SMS will be enabled in an
+            upcoming release.
           </p>
         </div>
 

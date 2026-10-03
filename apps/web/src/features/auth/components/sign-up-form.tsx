@@ -10,7 +10,7 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@operatio/ui/components/field";
+} from "@operatio/ui/components/ui/field";
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { signUp } from "../api/auth";

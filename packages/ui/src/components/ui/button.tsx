@@ -55,7 +55,7 @@ function Button({
       disabled={props.disabled || loading}
       className={cn(
         buttonVariants({ variant, size, className }),
-        loading && "cursor-wait opacity-70"
+        loading && "cursor-wait opacity-70 active:scale-80"
       )}
       {...props}
       data-loading={loading}

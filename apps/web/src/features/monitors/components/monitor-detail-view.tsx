@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -18,7 +18,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@operatio/ui/components/empty";
+} from "@operatio/ui/components/ui/empty";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
 import {
@@ -28,33 +28,46 @@ import {
   CardHeader,
   CardTitle,
 } from "@operatio/ui/components/ui/card";
+import {
+  ResourceView,
+  type Column,
+} from "@operatio/ui/components/resource-view";
 import { Button } from "@operatio/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@operatio/ui/components/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@operatio/ui/components/table";
-import { Tabs, TabsList, TabsTrigger } from "@operatio/ui/components/tabs";
+} from "@operatio/ui/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@operatio/ui/components/ui/tabs";
 import { useOrganizations } from "@app/features/auth/hooks/auth-queries";
 import {
   useMonitor,
   useMonitorChecks,
   useMonitorStats,
 } from "@app/features/monitors/hooks/dashboard-queries";
-import type { MonitorCheckSort } from "@app/features/monitors/api/monitors";
-import { EditMonitorDialog } from "./edit-monitor-dialog";
+import type {
+  MonitorCheck,
+  MonitorCheckSort,
+} from "@app/features/monitors/api/monitors";
+import { MonitorDialog } from "./monitor-dialog";
 import { checkedAgo, MonitorStatusBadge } from "./monitor-presentational";
+import { UptimeBars } from "@app/features/status/components/uptime-bars";
 
 type CheckFilter = "ALL" | "UP" | "DOWN";
+type CheckRange = "24h" | "7d" | "30d" | "90d" | "all";
+
+const checkRanges: {
+  value: CheckRange;
+  label: string;
+  milliseconds?: number;
+}[] = [
+  { value: "24h", label: "24 hours", milliseconds: 24 * 60 * 60 * 1000 },
+  { value: "7d", label: "7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
+  { value: "30d", label: "30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
+  { value: "90d", label: "90 days", milliseconds: 90 * 24 * 60 * 60 * 1000 },
+  { value: "all", label: "All time" },
+];
 
 const sortLabels: Record<MonitorCheckSort, string> = {
   newest: "Newest first",
@@ -65,6 +78,58 @@ const sortLabels: Record<MonitorCheckSort, string> = {
 function formatMilliseconds(value: number) {
   return `${value.toLocaleString()} ms`;
 }
+
+const checkColumns: Column<MonitorCheck>[] = [
+  {
+    header: "Checked",
+    className: "whitespace-nowrap",
+    cell: (check) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        {new Date(check.checkedAt).toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })}
+      </span>
+    ),
+  },
+  {
+    header: "Result",
+    cell: (check) => <MonitorStatusBadge status={check.status} />,
+  },
+  {
+    header: "HTTP",
+    className: "w-20",
+    cell: (check) => (
+      <span className="font-mono text-xs tabular-nums">
+        {check.statusCode ?? "—"}
+      </span>
+    ),
+  },
+  {
+    header: "Response",
+    className: "whitespace-nowrap text-right",
+    cell: (check) => (
+      <span className="font-mono text-xs tabular-nums">
+        {formatMilliseconds(check.responseTimeMs)}
+      </span>
+    ),
+  },
+  {
+    header: "Details",
+    className: "max-w-[16rem]",
+    cell: (check) => (
+      <span
+        className="block truncate text-xs text-muted-foreground"
+        title={check.error ?? undefined}
+      >
+        {check.error ?? "—"}
+      </span>
+    ),
+  },
+];
 
 export function MonitorDetailView({
   orgSlug,
@@ -77,10 +142,17 @@ export function MonitorDetailView({
   const [checkPage, setCheckPage] = useState(1);
   const [checkFilter, setCheckFilter] = useState<CheckFilter>("ALL");
   const [checkSort, setCheckSort] = useState<MonitorCheckSort>("newest");
+  const [checkRange, setCheckRange] = useState<CheckRange>("24h");
   const organizations = useOrganizations();
   const organization = organizations.data?.find(
     (item) => item.slug === orgSlug,
   );
+  const fromDate = useMemo(() => {
+    const range = checkRanges.find((option) => option.value === checkRange);
+    return range?.milliseconds
+      ? new Date(Date.now() - range.milliseconds).toISOString()
+      : undefined;
+  }, [checkRange]);
   const monitorQuery = useMonitor(organization?.id, monitorId);
   const checksQuery = useMonitorChecks(
     organization?.id,
@@ -88,6 +160,7 @@ export function MonitorDetailView({
     checkPage,
     checkFilter === "ALL" ? undefined : checkFilter,
     checkSort,
+    fromDate,
   );
   const statsQuery = useMonitorStats(organization?.id, monitorId);
   const listHref = `/${encodeURIComponent(orgSlug)}/dashboard/monitors`;
@@ -241,7 +314,7 @@ export function MonitorDetailView({
             Current settings reported by the API.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <div>
             <p className="text-muted-foreground">Check interval</p>
             <p className="mt-1 font-mono tabular-nums">
@@ -251,8 +324,12 @@ export function MonitorDetailView({
           <div>
             <p className="text-muted-foreground">Timeout</p>
             <p className="mt-1 font-mono tabular-nums">
-              {formatMilliseconds(monitor.timeout)}
+              {monitor.timeout / 1000} sec
             </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Monitoring</p>
+            <p className="mt-1">{monitor.isActive ? "Enabled" : "Paused"}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Public status pages</p>
@@ -262,6 +339,18 @@ export function MonitorDetailView({
             <p className="text-muted-foreground">Last checked</p>
             <p className="mt-1">{checkedAgo(monitor.lastCheckedAt)}</p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Uptime history</CardTitle>
+          <CardDescription>
+            Daily check results over the last 90 days.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UptimeBars data={stats?.dailyUptime ?? []} />
         </CardContent>
       </Card>
 
@@ -314,17 +403,35 @@ export function MonitorDetailView({
             }}
           >
             <TabsList aria-label="Filter checks by result">
-              <TabsTrigger value="ALL">
-                All {stats?.totalChecks.toLocaleString() ?? ""}
-              </TabsTrigger>
-              <TabsTrigger value="UP">
-                Successful {stats?.successfulChecks.toLocaleString() ?? ""}
-              </TabsTrigger>
-              <TabsTrigger value="DOWN">
-                Failed {stats?.failedChecks.toLocaleString() ?? ""}
-              </TabsTrigger>
+              <TabsTrigger value="ALL">All</TabsTrigger>
+              <TabsTrigger value="UP">Successful</TabsTrigger>
+              <TabsTrigger value="DOWN">Failed</TabsTrigger>
             </TabsList>
           </Tabs>
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="group"
+            aria-label="Filter checks by time range"
+          >
+            <span className="mr-1 text-sm text-muted-foreground">
+              Time range
+            </span>
+            {checkRanges.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={checkRange === option.value ? "secondary" : "ghost"}
+                aria-pressed={checkRange === option.value}
+                onClick={() => {
+                  setCheckRange(option.value);
+                  setCheckPage(1);
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {checksQuery.isPending ? (
@@ -348,47 +455,44 @@ export function MonitorDetailView({
               </EmptyHeader>
             </Empty>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Checked</TableHead>
-                  <TableHead>Result</TableHead>
-                  <TableHead>HTTP</TableHead>
-                  <TableHead className="text-right">Response</TableHead>
-                  <TableHead className="pr-6">Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {checks.map((check) => (
-                  <TableRow key={check.id}>
-                    <TableCell className="pl-6 font-mono text-xs text-muted-foreground">
-                      {new Date(check.checkedAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })}
-                    </TableCell>
-                    <TableCell>
+            <ResourceView<MonitorCheck>
+              data={checks}
+              keyExtractor={(check) => check.id}
+              columns={checkColumns}
+              defaultViewMode="table"
+              rowOffset={(checkPage - 1) * 10}
+              renderCard={(check) => (
+                <Card key={check.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <CardTitle className="font-mono text-sm">
+                        {new Date(check.checkedAt).toLocaleString()}
+                      </CardTitle>
                       <MonitorStatusBadge status={check.status} />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs tabular-nums">
-                      {check.statusCode ?? "—"}
-                    </TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs tabular-nums">
-                      {formatMilliseconds(check.responseTimeMs)}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[16rem] truncate pr-6 text-xs text-muted-foreground"
-                      title={check.error ?? undefined}
-                    >
-                      {check.error ?? "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">HTTP</p>
+                      <p className="mt-1 font-mono tabular-nums">
+                        {check.statusCode ?? "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Response</p>
+                      <p className="mt-1 font-mono tabular-nums">
+                        {formatMilliseconds(check.responseTimeMs)}
+                      </p>
+                    </div>
+                    {check.error && (
+                      <p className="col-span-2 break-words text-xs text-muted-foreground">
+                        {check.error}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            />
           )}
         </CardContent>
         {!!checksQuery.data && checksQuery.data.meta.totalPages > 1 && (
@@ -424,7 +528,7 @@ export function MonitorDetailView({
         )}
       </Card>
 
-      <EditMonitorDialog
+      <MonitorDialog
         organizationId={organization.id}
         monitor={monitor}
         open={editOpen}

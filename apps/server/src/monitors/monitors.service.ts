@@ -102,46 +102,87 @@ export class MonitorsService {
     monitorId: string,
     updateMonitorDto: UpdateMonitorDto,
   ): Promise<void> {
-    const updateData: Prisma.MonitorUpdateInput = { ...updateMonitorDto };
-
-    const monitor = await this.prisma.monitor.findUnique({
+    const monitor = await this.prisma.monitor.findFirst({
       where: { id: monitorId, organizationId },
-      select: { interval: true, url: true },
+      select: {
+        name: true,
+        url: true,
+        interval: true,
+        timeout: true,
+        isActive: true,
+        isPublic: true,
+      },
     });
 
-    if (monitor) {
-      updateData.nextCheckAt = new Date(
-        Date.now() + (updateMonitorDto.interval || monitor.interval) * 1000,
-      );
+    if (!monitor) {
+      throw new NotFoundException('Monitor not found');
     }
 
-    // Check for duplicate URL if URL is being changed
-    if (updateMonitorDto.url && updateMonitorDto.url !== monitor?.url) {
+    const updateData: Prisma.MonitorUpdateInput = {};
+    if (updateMonitorDto.name !== undefined && updateMonitorDto.name !== monitor.name) {
+      updateData.name = updateMonitorDto.name;
+    }
+    if (updateMonitorDto.url !== undefined && updateMonitorDto.url !== monitor.url) {
+      updateData.url = updateMonitorDto.url;
+    }
+    if (
+      updateMonitorDto.interval !== undefined &&
+      updateMonitorDto.interval !== monitor.interval
+    ) {
+      updateData.interval = updateMonitorDto.interval;
+    }
+    if (
+      updateMonitorDto.timeout !== undefined &&
+      updateMonitorDto.timeout !== monitor.timeout
+    ) {
+      updateData.timeout = updateMonitorDto.timeout;
+    }
+    if (
+      updateMonitorDto.isPublic !== undefined &&
+      updateMonitorDto.isPublic !== monitor.isPublic
+    ) {
+      updateData.isPublic = updateMonitorDto.isPublic;
+    }
+    if (
+      updateMonitorDto.isActive !== undefined &&
+      updateMonitorDto.isActive !== monitor.isActive
+    ) {
+      updateData.isActive = updateMonitorDto.isActive;
+    }
+
+    const urlChanged = updateData.url !== undefined;
+    const wasReactivated = updateData.isActive === true && !monitor.isActive;
+    const intervalChanged = updateData.interval !== undefined;
+    const shouldCheck = urlChanged || wasReactivated;
+
+    if (urlChanged) {
       const existingMonitor = await this.prisma.monitor.findFirst({
         where: {
           organizationId,
           url: updateMonitorDto.url,
-          id: { not: monitorId }, // Exclude current monitor
+          id: { not: monitorId },
         },
         select: { id: true },
       });
 
       if (existingMonitor) {
-        throw new ConflictException('A monitor with this URL already exists in your organization');
+        throw new ConflictException(
+          'A monitor with this URL already exists in your organization',
+        );
       }
     }
 
-    const shouldCheck =
-      updateMonitorDto.isActive === true ||
-      (updateMonitorDto.url !== undefined &&
-        updateMonitorDto.url !== monitor?.url);
+    if (shouldCheck || intervalChanged) {
+      updateData.nextCheckAt = new Date(
+        Date.now() + (updateMonitorDto.interval ?? monitor.interval) * 1000,
+      );
+    }
 
-    if (
-      updateMonitorDto.url !== undefined ||
-      updateMonitorDto.isActive === true
-    ) {
+    if (shouldCheck) {
       updateData.status = MonitorStatus.PENDING;
     }
+
+    if (Object.keys(updateData).length === 0) return;
 
     await this.prisma.$transaction(
       async (tx) => {
@@ -262,7 +303,9 @@ export class MonitorsService {
       throw new NotFoundException('Monitor not found');
     }
 
-    const result = await this.prisma.$runCommandRaw({
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const [result, recentChecks] = await Promise.all([
+      this.prisma.$runCommandRaw({
       aggregate: 'monitor_checks',
       pipeline: [
         {
@@ -290,7 +333,41 @@ export class MonitorsService {
         },
       ],
       cursor: {},
-    });
+      }),
+      this.prisma.monitorCheck.findMany({
+        where: {
+          monitorId,
+          organizationId,
+          checkedAt: { gte: ninetyDaysAgo },
+        },
+        select: { status: true, checkedAt: true },
+        orderBy: { checkedAt: 'asc' },
+      }),
+    ]);
+
+    const daily = new Map<string, { total: number; up: number; failures: number }>();
+    const now = new Date();
+    for (let offset = 89; offset >= 0; offset--) {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - offset));
+      daily.set(date.toISOString().slice(0, 10), { total: 0, up: 0, failures: 0 });
+    }
+    for (const check of recentChecks) {
+      const day = daily.get(check.checkedAt.toISOString().slice(0, 10));
+      if (!day) continue;
+      day.total++;
+      if (check.status === MonitorStatus.UP) day.up++;
+      else day.failures++;
+    }
+    const dailyUptime = Array.from(daily, ([date, values]) => ({
+      date,
+      uptimePercentage: values.total > 0
+        ? Math.round((values.up / values.total) * 10_000) / 100
+        : null,
+      downDurationMinutes: values.failures > 0
+        ? Math.max(1, Math.round((values.failures * monitor.interval) / 60))
+        : 0,
+      failureCount: values.failures,
+    }));
 
     const aggregate = (
       result as unknown as {
@@ -313,6 +390,7 @@ export class MonitorsService {
         successfulChecks: 0,
         failedChecks: 0,
         latestStatus: monitor.status,
+        dailyUptime,
       };
     }
 
@@ -327,6 +405,7 @@ export class MonitorsService {
       successfulChecks,
       failedChecks,
       latestStatus: monitor.status,
+      dailyUptime,
     };
   }
 }

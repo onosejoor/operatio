@@ -7,17 +7,17 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 import { useIsMobile } from "@operatio/ui/hooks/use-mobile"
-import { Button } from "@operatio/ui/components/button"
-import { Input } from "@operatio/ui/components/input"
-import { Separator } from "@operatio/ui/components/separator"
+import { Button } from "@operatio/ui/components/ui/button"
+import { Input } from "#components/ui/input"
+import { Separator } from "#components/ui/separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@operatio/ui/components/sheet"
-import { Skeleton } from "@operatio/ui/components/skeleton"
+} from "#components/ui/sheet"
+import { Skeleton } from "#components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,

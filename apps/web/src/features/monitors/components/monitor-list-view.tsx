@@ -11,7 +11,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@operatio/ui/components/empty";
+} from "@operatio/ui/components/ui/empty";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
 import { ResourceView } from "@operatio/ui/components/resource-view";
@@ -28,22 +28,21 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@operatio/ui/components/dropdown-menu";
+} from "@operatio/ui/components/ui/dropdown-menu";
 import type { Column } from "@operatio/ui/components/resource-view";
 import { useOrganizations } from "@app/features/auth/hooks/auth-queries";
 import { useMonitors } from "@app/features/monitors/hooks/dashboard-queries";
 import type { MonitorSummary } from "@app/features/monitors/api/monitors";
-import { AddMonitorDialog } from "./add-monitor-dialog";
-import {
-  monitorColumns,
-  MonitorSummaryCard,
-} from "./monitor-presentational";
+import { MonitorDialog } from "./monitor-dialog";
+import { monitorColumns, MonitorSummaryCard } from "./monitor-presentational";
 
 export function MonitorListView({ orgSlug }: { orgSlug: string }) {
   const [addMonitorOpen, setAddMonitorOpen] = useState(false);
   const router = useRouter();
   const organizations = useOrganizations();
-  const organization = organizations.data?.find((item) => item.slug === orgSlug);
+  const organization = organizations.data?.find(
+    (item) => item.slug === orgSlug,
+  );
   const monitors = useMonitors(organization?.id);
 
   if (organizations.isPending || (organization && monitors.isPending)) {
@@ -101,6 +100,7 @@ export function MonitorListView({ orgSlug }: { orgSlug: string }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
+                className="whitespace-nowrap *:shrink-0"
                 render={
                   <Link
                     href={`/${encodeURIComponent(orgSlug)}/dashboard/monitors/${monitor.id}`}
@@ -136,7 +136,8 @@ export function MonitorListView({ orgSlug }: { orgSlug: string }) {
         <CardHeader>
           <CardTitle>All monitors</CardTitle>
           <CardDescription>
-            {monitorList.length} active {monitorList.length === 1 ? "monitor" : "monitors"}
+            {monitorList.length} active{" "}
+            {monitorList.length === 1 ? "monitor" : "monitors"}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -181,7 +182,7 @@ export function MonitorListView({ orgSlug }: { orgSlug: string }) {
         </CardContent>
       </Card>
 
-      <AddMonitorDialog
+      <MonitorDialog
         organizationId={organization.id}
         open={addMonitorOpen}
         onOpenChange={setAddMonitorOpen}

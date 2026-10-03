@@ -40,6 +40,12 @@ export interface MonitorStats {
   successfulChecks: number;
   failedChecks: number;
   latestStatus: MonitorSummary["status"];
+  dailyUptime: Array<{
+    date: string;
+    uptimePercentage: number | null;
+    downDurationMinutes: number;
+    failureCount: number;
+  }>;
 }
 
 export interface CreateMonitorInput {
@@ -55,6 +61,7 @@ export interface UpdateMonitorInput extends Partial<CreateMonitorInput> {
 }
 
 export type MonitorCheckSort = "newest" | "oldest" | "slowest";
+export type MonitorCheckStatus = MonitorSummary["status"];
 
 export interface IncidentSummary {
   id: string;
@@ -85,6 +92,7 @@ export function getMonitorChecks(
   limit = 10,
   status?: MonitorSummary["status"],
   sort: MonitorCheckSort = "newest",
+  fromDate?: string,
 ) {
   const params = new URLSearchParams({
     page: String(page),
@@ -92,6 +100,7 @@ export function getMonitorChecks(
     sort,
   });
   if (status) params.set("status", status);
+  if (fromDate) params.set("fromDate", fromDate);
 
   return apiFetch<ApiResponse<MonitorChecksPage>>(
     `/organizations/${organizationId}/monitors/${monitorId}/checks?${params}`,

@@ -5,9 +5,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@operatio/ui/components/table"
+} from "#components/ui/table"
 import { cn } from "@operatio/ui/lib/utils" // adjust to wherever your cn() lives
-import { Button } from "./button"
+import { Button } from "./ui/button"
 import { LayoutGrid, List } from "lucide-react"
 import React, { useState } from "react"
 
@@ -27,6 +27,7 @@ interface ResourceViewProps<T> {
   emptyState?: React.ReactNode
   defaultViewMode?: ViewMode
   onRowClick?: (item: T) => void
+  rowOffset?: number
 }
 
 export function ResourceView<T>({
@@ -37,6 +38,7 @@ export function ResourceView<T>({
   emptyState,
   defaultViewMode = "cards",
   onRowClick,
+  rowOffset = 0,
 }: ResourceViewProps<T>) {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode)
 
@@ -86,6 +88,10 @@ export function ResourceView<T>({
           {/* One typeface, one weight, muted: headers label the data, they don't compete with it */}
           <TableHeader className="bg-muted/40">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="h-10 px-4 text-xs font-medium text-muted-foreground first:pl-6 last:pr-6">
+                S/N
+              </TableHead>
+
               {columns.map((col, index) => (
                 <TableHead
                   key={index}
@@ -100,7 +106,7 @@ export function ResourceView<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((item) => (
+            {data.map((item, index) => (
               <TableRow
                 key={keyExtractor(item)}
                 onClick={onRowClick ? () => onRowClick(item) : undefined}
@@ -109,6 +115,9 @@ export function ResourceView<T>({
                   onRowClick && "cursor-pointer"
                 )}
               >
+                <TableCell className="px-4 py-3.5 text-xs text-muted-foreground tabular-nums first:pl-6">
+                  {rowOffset + index + 1}
+                </TableCell>
                 {columns.map((col, index) => (
                   <TableCell
                     key={index}
