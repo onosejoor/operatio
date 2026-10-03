@@ -15,7 +15,7 @@ import { AggregateType } from '@prisma/client';
 import { PRISMA_TRANSACTION_TIMEOUT, PrismaTransactionType } from '@/constants';
 import { randomUUID } from 'crypto';
 
-const INCIDENT_FAILURE_THRESHOLD = 3; // Number of consecutive failures before creating incident
+const INCIDENT_FAILURE_THRESHOLD = 2; // Number of consecutive failures before creating incident
 
 interface MonitorStatusChangedPayload {
   monitorId: string;
