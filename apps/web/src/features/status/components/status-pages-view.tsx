@@ -19,6 +19,7 @@ import {
   useUpdateStatusPage,
 } from "@app/features/status/hooks/status-pages-queries";
 import { StatusPageDialog } from "@app/features/status/components/create-status-page-dialog";
+import { getPublicStatusUrl } from "@app/features/status/lib/public-status-url";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
 import {
@@ -77,19 +78,32 @@ function StatusPageActions({
           <Ellipsis aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem className="whitespace-nowrap" onClick={() => onEdit(page)}>
+          <DropdownMenuItem
+            className="whitespace-nowrap"
+            onClick={() => onEdit(page)}
+          >
             <Pencil aria-hidden="true" /> Edit page
           </DropdownMenuItem>
           <DropdownMenuItem
             className="whitespace-nowrap"
-            render={<Link href={`/${encodeURIComponent(orgSlug)}/dashboard/status-pages/${page.id}`} />}
+            render={
+              <Link
+                href={`/${encodeURIComponent(orgSlug)}/dashboard/status-pages/${page.id}`}
+              />
+            }
           >
             <Globe2 aria-hidden="true" /> Manage monitors
           </DropdownMenuItem>
           {page.isPublic && (
             <DropdownMenuItem
               className="whitespace-nowrap"
-              render={<Link href={`/status/${encodeURIComponent(page.slug)}`} target="_blank" rel="noreferrer" />}
+              render={
+                <a
+                  href={getPublicStatusUrl(page.slug)}
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
             >
               <ExternalLink aria-hidden="true" /> View public page
             </DropdownMenuItem>
@@ -103,14 +117,20 @@ function StatusPageActions({
                 {
                   onSuccess: () =>
                     toast.success(
-                      page.isPublic ? "Status page unpublished" : "Status page published",
+                      page.isPublic
+                        ? "Status page unpublished"
+                        : "Status page published",
                     ),
                   onError: (error) => toast.error(error.message),
                 },
               )
             }
           >
-            {page.isPublic ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            {page.isPublic ? (
+              <EyeOff aria-hidden="true" />
+            ) : (
+              <Eye aria-hidden="true" />
+            )}
             {page.isPublic ? "Unpublish page" : "Publish page"}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -123,7 +143,9 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingPage, setEditingPage] = useState<StatusPageSummary>();
   const organizations = useOrganizations();
-  const organization = organizations.data?.find((item) => item.slug === orgSlug);
+  const organization = organizations.data?.find(
+    (item) => item.slug === orgSlug,
+  );
   const statusPages = useStatusPages(organization?.id);
 
   if (organizations.isPending || (organization && statusPages.isPending)) {
@@ -177,9 +199,14 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
     {
       header: "Address",
       cell: (page) => (
-        <span className="font-mono text-xs text-muted-foreground">
-          /status/{page.slug}
-        </span>
+        <a
+          className="font-mono text-xs text-muted-foreground hover:underline"
+          href={getPublicStatusUrl(page.slug)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {getPublicStatusUrl(page.slug)}
+        </a>
       ),
     },
     {
@@ -199,12 +226,19 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">Status pages</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Status pages
+          </h2>
           <p className="text-sm text-muted-foreground">
             Publish service health updates for {organization.name}.
           </p>
         </div>
-        <Button onClick={() => { setEditingPage(undefined); setCreateOpen(true); }}>
+        <Button
+          onClick={() => {
+            setEditingPage(undefined);
+            setCreateOpen(true);
+          }}
+        >
           <Plus aria-hidden="true" />
           Create status page
         </Button>
@@ -217,7 +251,11 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
         {[
           { label: "Total pages", value: pages.length, icon: Globe2 },
           { label: "Public", value: publicCount, icon: ExternalLink },
-          { label: "Private", value: pages.length - publicCount, icon: ShieldCheck },
+          {
+            label: "Private",
+            value: pages.length - publicCount,
+            icon: ShieldCheck,
+          },
         ].map(({ label, value, icon: Icon }) => (
           <Card key={label}>
             <CardHeader className="pb-2">
@@ -230,7 +268,9 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              {label === "Total pages" ? "Created for this organization" : `${label} status pages`}
+              {label === "Total pages"
+                ? "Created for this organization"
+                : `${label} status pages`}
             </CardContent>
           </Card>
         ))}
@@ -262,9 +302,11 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
-                      <CardTitle className="truncate text-base">{page.name}</CardTitle>
+                      <CardTitle className="truncate text-base">
+                        {page.name}
+                      </CardTitle>
                       <CardDescription className="truncate font-mono text-xs">
-                        /status/{page.slug}
+                        {getPublicStatusUrl(page.slug)}
                       </CardDescription>
                     </div>
                     <StatusPageActions

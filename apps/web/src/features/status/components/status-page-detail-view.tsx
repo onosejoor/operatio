@@ -31,6 +31,7 @@ import {
 import { Button } from "@operatio/ui/components/ui/button";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { MonitorStatusBadge } from "@app/features/monitors/components/monitor-presentational";
+import { getPublicStatusUrl } from "@app/features/status/lib/public-status-url";
 
 function RemoveStatusMonitorButton({
   organizationId,
@@ -170,7 +171,7 @@ export function StatusPageDetailView({
             {page.data.description || "Choose which enabled monitors appear on this page."}
           </p>
           <p className="font-mono text-xs text-muted-foreground">
-            /status/{page.data.slug}
+            {getPublicStatusUrl(page.data.slug)}
           </p>
         </div>
         <Button variant="outline" onClick={() => setEditOpen(true)}>
@@ -320,7 +321,7 @@ export function StatusPageDetailView({
         <CardContent className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">This page is currently <span className="font-medium text-foreground">{page.data.isPublic ? "published" : "private"}</span>.</p>
           <div className="flex flex-wrap gap-2">
-            {page.data.isPublic && <Button variant="outline" nativeButton={false} render={<Link href={`/status/${encodeURIComponent(page.data.slug)}`} target="_blank" rel="noreferrer" />}><ExternalLink aria-hidden="true" /> Preview public page</Button>}
+            {page.data.isPublic && <Button variant="outline" nativeButton={false} render={<a href={getPublicStatusUrl(page.data.slug)} target="_blank" rel="noreferrer" />}><ExternalLink aria-hidden="true" /> Preview public page</Button>}
             <Button disabled={updatePage.isPending} variant={page.data.isPublic ? "outline" : "default"} onClick={() => updatePage.mutate({ isPublic: !page.data.isPublic }, { onSuccess: () => toast.success(page.data.isPublic ? "Status page unpublished" : "Status page published"), onError: (error) => toast.error(error.message) })}>{page.data.isPublic ? "Unpublish page" : "Publish page"}</Button>
           </div>
         </CardContent>

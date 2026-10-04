@@ -14,11 +14,15 @@ export function AuthLayout({
   return (
     <main className="grid min-h-screen bg-background lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.8fr)]">
       <section className="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-sidebar p-10 lg:flex xl:p-14">
-        <Link
-          href="/"
-          className="flex w-fit items-center"
-        >
-          <Image src="/logo.svg" alt="Operatio" width={124} height={38} priority />
+        <Link href="/" className="flex w-fit items-center">
+          <Image
+            src="/logo.svg"
+            className="dark:invert-100"
+            alt="Operatio"
+            width={124}
+            height={38}
+            priority
+          />
         </Link>
         <div className="max-w-lg">
           <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-brand">
@@ -42,11 +46,14 @@ export function AuthLayout({
       </section>
       <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
         <div className="w-full max-w-[390px]">
-          <Link
-            href="/"
-            className="mb-10 flex w-fit items-center lg:hidden"
-          >
-            <Image src="/logo.svg" alt="Operatio" width={124} height={38} priority />
+          <Link href="/" className="mb-10 flex w-fit items-center lg:hidden">
+            <Image
+              src="/logo.svg"
+              alt="Operatio"
+              width={124}
+              height={38}
+              priority
+            />
           </Link>
           <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{description}</p>
