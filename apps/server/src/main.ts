@@ -72,7 +72,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      console.log({ origin, corsOrigin, appOrigin });
+      // console.log({ origin, corsOrigin, appOrigin });
       // 1. Allow server-to-server or API tools (Postman, curl)
       if (!origin) {
         return callback(null, true);

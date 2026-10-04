@@ -15,7 +15,6 @@ export function usePublicStatus(
   slug: string,
   initialData?: PublicStatusResponse,
 ) {
-  console.log({ slug, initialData });
   return useQuery<PublicStatusResponse>({
     queryKey: statusKeys.public(slug),
     queryFn: () => getPublicStatus(slug),
