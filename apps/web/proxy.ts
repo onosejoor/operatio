@@ -1,14 +1,24 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const RESERVED_SUBDOMAINS = ['www', 'app', 'api', 'docs', 'localhost']
+const RESERVED_SUBDOMAINS = ['www', 'app', 'api', 'docs']
 
 export function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
-  const subdomain = hostname.split('.')[0]
+  const configuredRoot = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
+  const rootUrl = new URL(
+    configuredRoot.includes('://') ? configuredRoot : `http://${configuredRoot}`,
+  )
+  const requestHost = hostname.split(':')[0].toLowerCase()
+  const rootHost = rootUrl.hostname.toLowerCase()
 
-  // Skip proxy for reserved subdomains or main domain
-  if (RESERVED_SUBDOMAINS.includes(subdomain) || hostname.split('.').length <= 2) {
+  // Only rewrite a single subdomain directly under the configured root domain.
+  if (requestHost === rootHost || !requestHost.endsWith(`.${rootHost}`)) {
+    return NextResponse.next()
+  }
+
+  const subdomain = requestHost.slice(0, -(rootHost.length + 1))
+  if (!subdomain || subdomain.includes('.') || RESERVED_SUBDOMAINS.includes(subdomain)) {
     return NextResponse.next()
   }
 

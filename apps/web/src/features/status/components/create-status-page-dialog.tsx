@@ -8,6 +8,7 @@ import { Input } from "@operatio/ui/components/ui/input";
 import { Switch } from "@operatio/ui/components/ui/switch";
 import { Textarea } from "@operatio/ui/components/ui/textarea";
 import { toast } from "@operatio/ui/components/ui/sonner";
+import { getPublicStatusUrl } from "@app/features/status/lib/public-status-url";
 import { useCreateStatusPage, useUpdateStatusPage } from "../hooks/status-pages-queries";
 import type { StatusPageInput, StatusPageSummary } from "../api/status-pages";
 
@@ -89,7 +90,7 @@ export function StatusPageDialog({ organizationId, page, open, onOpenChange }: S
               <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-name">Name</FieldLabel><Input {...field} id="status-page-name" placeholder="Acme Status" maxLength={120} aria-invalid={fieldState.invalid} />{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
             )} />
             <Controller name="slug" control={form.control} rules={{ required: "Choose a URL name for this page.", maxLength: { value: 100, message: "Use 100 characters or fewer." }, validate: (value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.trim().toLowerCase()) || "Use lowercase letters, numbers, and hyphens." }} render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-slug">Page URL</FieldLabel><Input {...field} id="status-page-slug" placeholder="acme-status" autoCapitalize="none" aria-invalid={fieldState.invalid} onChange={(event) => field.onChange(event.target.value.toLowerCase().replace(/\s+/g, "-"))} /><FieldDescription>Customers will visit /status/{form.watch("slug") || "your-page"}.</FieldDescription>{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
+              <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-slug">Page address</FieldLabel><Input {...field} id="status-page-slug" placeholder="acme-status" autoCapitalize="none" aria-invalid={fieldState.invalid} onChange={(event) => field.onChange(event.target.value.toLowerCase().replace(/\s+/g, "-"))} /><FieldDescription>Customers will visit {getPublicStatusUrl(form.watch("slug") || "your-page")}.</FieldDescription>{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
             )} />
             <Controller name="description" control={form.control} rules={{ maxLength: { value: 500, message: "Use 500 characters or fewer." } }} render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}><FieldLabel htmlFor="status-page-description">Description</FieldLabel><Textarea {...field} id="status-page-description" placeholder="Updates about current service health." maxLength={500} aria-invalid={fieldState.invalid} />{fieldState.invalid && <FieldError errors={[fieldState.error]} />}</Field>
