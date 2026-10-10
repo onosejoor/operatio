@@ -26,95 +26,198 @@ export interface EmailTemplateContextMap {
 
 export type EmailTemplateName = keyof EmailTemplateContextMap;
 
+const BRAND_NAME = 'Operatio';
+const FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+
+const COLORS = {
+  background: '#f3f4f6',
+  card: '#ffffff',
+  border: '#e5e7eb',
+  text: '#111827',
+  body: '#374151',
+  muted: '#6b7280',
+  accent: '#2563eb',
+};
+
+const SEVERITY_STYLES: Record<string, { color: string; background: string }> = {
+  critical: { color: '#b42318', background: '#fef3f2' },
+  high: { color: '#b54708', background: '#fffaeb' },
+  medium: { color: '#854d0e', background: '#fefce8' },
+  low: { color: '#344054', background: '#f2f4f7' },
+};
+
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[character];
+  });
+
+interface LayoutOptions {
+  title: string;
+  preheader: string;
+  /** Trusted HTML. Interpolate only escaped values. */
+  body: string;
+  /** Trusted HTML. Interpolate only escaped values. */
+  footer: string;
+}
+
+const layout = ({
+  title,
+  preheader,
+  body,
+  footer,
+}: LayoutOptions): string => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${escapeHtml(title)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${COLORS.background};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(preheader)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${COLORS.background};">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
+          <tr>
+            <td style="padding:0 4px 16px;font-family:${FONT_STACK};font-size:16px;font-weight:600;color:${COLORS.text};">${BRAND_NAME}</td>
+          </tr>
+          <tr>
+            <td style="background-color:${COLORS.card};border:1px solid ${COLORS.border};border-radius:8px;padding:32px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${COLORS.body};">
+${body}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 4px 0;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${COLORS.muted};">
+${footer}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+const heading = (text: string): string =>
+  `<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:600;color:${COLORS.text};">${text}</h1>`;
+
+const paragraph = (html: string, marginBottom = 16): string =>
+  `<p style="margin:0 0 ${marginBottom}px;">${html}</p>`;
+
+const button = (
+  href: string,
+  label: string,
+): string => `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
+  <tr>
+    <td bgcolor="${COLORS.accent}" style="border-radius:6px;">
+      <a href="${href}" style="display:inline-block;padding:12px 20px;font-family:${FONT_STACK};font-size:15px;font-weight:600;line-height:1;color:#ffffff;text-decoration:none;border-radius:6px;">${label}</a>
+    </td>
+  </tr>
+</table>`;
+
+const fallbackLink = (url: string): string =>
+  `<p style="margin:0 0 16px;font-size:13px;color:${COLORS.muted};">If the button doesn't work, paste this link into your browser:<br><a href="${url}" style="color:${COLORS.accent};word-break:break-all;">${url}</a></p>`;
+
+const detailRow = (
+  label: string,
+  valueHtml: string,
+  isLast = false,
+): string => {
+  const border = isLast ? '' : `border-bottom:1px solid ${COLORS.border};`;
+  return `<tr>
+  <td style="padding:10px 0;${border}font-size:14px;color:${COLORS.muted};">${label}</td>
+  <td align="right" style="padding:10px 0;${border}font-size:14px;color:${COLORS.text};">${valueHtml}</td>
+</tr>`;
+};
+
+const severityBadge = (severity: string): string => {
+  const style =
+    SEVERITY_STYLES[severity.trim().toLowerCase()] ?? SEVERITY_STYLES.low;
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:${style.color};background-color:${style.background};">${escapeHtml(severity)}</span>`;
+};
+
 export const EMAIL_TEMPLATES: {
   [K in EmailTemplateName]: (context: EmailTemplateContextMap[K]) => string;
 } = {
-  'email-verification': (context) => `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Your Email</title>
-</head>
-<body>
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h1>Verify Your Email</h1>
-    <p>Thank you for signing up for operatio! Please verify your email address by clicking the button below:</p>
-    <p>
-      <a href="${context.verificationUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Verify Email</a>
-    </p>
-    <p>Or copy and paste this link into your browser:</p>
-    <p>${context.verificationUrl}</p>
-    <p>This link will expire in 24 hours.</p>
-    <p>If you didn't create an account with operatio, you can safely ignore this email.</p>
-  </div>
-</body>
-</html>`,
-  'password-reset': (context) => `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Your Password</title>
-</head>
-<body>
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h1>Reset Your Password</h1>
-    <p>We received a request to reset your password. Click the button below to reset it:</p>
-    <p>
-      <a href="${context.resetUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a>
-    </p>
-    <p>Or copy and paste this link into your browser:</p>
-    <p>${context.resetUrl}</p>
-    <p>This link will expire in 1 hour.</p>
-    <p>If you didn't request a password reset, you can safely ignore this email.</p>
-  </div>
-</body>
-</html>`,
+  'email-verification': (context) => {
+    const name = escapeHtml(context.name.trim());
+    const url = escapeHtml(context.verificationUrl);
+
+    return layout({
+      title: 'Verify your email address',
+      preheader: `Confirm your email address to finish setting up your ${BRAND_NAME} account.`,
+      body: [
+        heading('Verify your email address'),
+        paragraph(name ? `Hi ${name},` : 'Hello,'),
+        paragraph(
+          `Confirm your email address to finish setting up your ${BRAND_NAME} account.`,
+        ),
+        button(url, 'Verify email address'),
+        paragraph('This link expires in 24 hours.', 16),
+        fallbackLink(url),
+      ].join('\n'),
+      footer: `If you didn't create a ${BRAND_NAME} account, you can ignore this email.`,
+    });
+  },
+
+  'password-reset': (context) => {
+    const name = escapeHtml(context.name.trim());
+    const url = escapeHtml(context.resetUrl);
+
+    return layout({
+      title: 'Reset your password',
+      preheader: `Use this link to choose a new ${BRAND_NAME} password.`,
+      body: [
+        heading('Reset your password'),
+        paragraph(name ? `Hi ${name},` : 'Hello,'),
+        paragraph(
+          `We received a request to reset the password for your ${BRAND_NAME} account. Use the button below to choose a new one.`,
+        ),
+        button(url, 'Reset password'),
+        paragraph('This link expires in 1 hour.', 16),
+        fallbackLink(url),
+      ].join('\n'),
+      footer:
+        "If you didn't request a password reset, you can ignore this email. Your password will not be changed.",
+    });
+  },
+
   'incident-created': (context) => {
-    const escapeHtml = (value: string) =>
-      value.replace(/[&<>"']/g, (character) => {
-        const entities: Record<string, string> = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        };
-        return entities[character];
-      });
     const organizationName = escapeHtml(context.organizationName);
     const monitorName = escapeHtml(context.monitorName);
     const incidentTitle = escapeHtml(context.incidentTitle);
-    const severity = escapeHtml(context.severity);
     const summary = escapeHtml(context.summary);
     const detectedAt = escapeHtml(context.detectedAt);
     const incidentUrl = escapeHtml(context.incidentUrl);
 
-    return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Incident detected: ${incidentTitle}</title>
-</head>
-<body style="margin:0;background:#f4f6f8;font-family:Arial,sans-serif;color:#17202a;">
-  <div style="max-width:600px;margin:0 auto;padding:32px 20px;">
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:32px;">
-      <p style="margin:0 0 8px;color:#b42318;font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;">Incident detected</p>
-      <h1 style="margin:0 0 20px;font-size:24px;line-height:1.3;">${incidentTitle}</h1>
-      <p style="margin:0 0 24px;color:#475467;">Operatio detected an issue affecting a monitored service in <strong>${organizationName}</strong>.</p>
-      <table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-        <tr><td style="padding:10px 0;color:#667085;border-bottom:1px solid #eaecf0;">Monitor</td><td style="padding:10px 0;text-align:right;font-weight:bold;border-bottom:1px solid #eaecf0;">${monitorName}</td></tr>
-        <tr><td style="padding:10px 0;color:#667085;border-bottom:1px solid #eaecf0;">Severity</td><td style="padding:10px 0;text-align:right;font-weight:bold;border-bottom:1px solid #eaecf0;">${severity}</td></tr>
-        <tr><td style="padding:10px 0;color:#667085;">Detected</td><td style="padding:10px 0;text-align:right;">${detectedAt}</td></tr>
-      </table>
-      <p style="margin:0 0 24px;color:#475467;">${summary}</p>
-      <a href="${incidentUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">View incidents</a>
-      <p style="margin:28px 0 0;color:#98a2b3;font-size:12px;">You are receiving this alert because you are an owner of ${organizationName} in Operatio.</p>
-    </div>
-  </div>
-</body>
-</html>`;
+    return layout({
+      title: `Incident detected: ${context.incidentTitle}`,
+      preheader: `${context.monitorName} in ${context.organizationName}: ${context.incidentTitle}`,
+      body: [
+        heading(incidentTitle),
+        paragraph(
+          `A monitor in <strong style="color:${COLORS.text};">${organizationName}</strong> has detected an issue.`,
+          20,
+        ),
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;border-top:1px solid ${COLORS.border};">`,
+        detailRow('Monitor', `<strong>${monitorName}</strong>`),
+        detailRow('Severity', severityBadge(context.severity)),
+        detailRow('Detected', detectedAt, true),
+        `</table>`,
+        paragraph(summary, 8),
+        button(incidentUrl, 'View incident'),
+      ].join('\n'),
+      footer: `You are receiving this alert because you are an owner of ${organizationName} on ${BRAND_NAME}.`,
+    });
   },
 };

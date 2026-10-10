@@ -1,2 +1,6 @@
+const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
+
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+  typeof window === "undefined"
+    ? `${backendUrl || "http://localhost:3001"}/api/v1`
+    : "/api/v1";
