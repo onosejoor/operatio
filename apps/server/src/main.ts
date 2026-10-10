@@ -67,12 +67,11 @@ async function bootstrap() {
   app.useGlobalInterceptors(new RequestIdInterceptor());
 
   // CORS configuration
-  const appOrigin = appConfig.get('app.appOrigin') || '';
+  const frontendUrl = appConfig.get('app.frontendUrl');
   const corsOrigin = appConfig.get('app.corsOrigin');
 
   app.enableCors({
     origin: (origin, callback) => {
-      // console.log({ origin, corsOrigin, appOrigin });
       // 1. Allow server-to-server or API tools (Postman, curl)
       if (!origin) {
         return callback(null, true);
@@ -83,10 +82,15 @@ async function bootstrap() {
       }
 
       try {
-        const escapedDomain = appOrigin.replace(/\./g, '\\.');
+        // URL parsing strips the protocol and path so CORS matches the frontend domain.
+        const frontendDomain = new URL(frontendUrl).hostname;
+        const escapedDomain = frontendDomain.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&',
+        );
 
         const dynamicRegex = new RegExp(
-          `^https?:\/\/([a-z0-9-]+.)*${escapedDomain}(:[0-9]+)?$`,
+          `^https?:\/\/([a-z0-9-]+\\.)*${escapedDomain}(:[0-9]+)?$`,
           'i',
         );
 

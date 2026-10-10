@@ -6,6 +6,7 @@ describe('envConfig', () => {
       nodeEnv: expect.any(String),
       port: expect.any(Number),
       corsOrigin: expect.any(String),
+      backendUrl: expect.any(String),
       frontendUrl: expect.any(String),
     });
   });
