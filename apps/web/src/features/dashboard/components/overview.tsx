@@ -26,7 +26,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@operatio/ui/components/ui/empty";
-import { Skeleton } from "@operatio/ui/components/ui/skeleton";
 
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { useOrganizations } from "@app/features/auth/hooks/auth-queries";
