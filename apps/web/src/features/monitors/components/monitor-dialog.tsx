@@ -272,9 +272,11 @@ export function MonitorDialog({
                         min={0.5}
                         max={60}
                         step={0.5}
-                        onChange={(event) =>
-                          field.onChange(Number(event.target.value))
-                        }
+                        value={field.value ?? ""}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          field.onChange(val === "" ? "" : Number(val));
+                        }}
                         aria-invalid={fieldState.invalid}
                       />
                       <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">
@@ -296,7 +298,7 @@ export function MonitorDialog({
                 control={form.control}
                 rules={{
                   validate: (value) =>
-                    (Number.isInteger(value) && value >= 1 && value <= 60) ||
+                    (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 60) ||
                     "Timeout must be between 1 and 60 seconds.",
                 }}
                 render={({ field, fieldState }) => (
@@ -312,9 +314,11 @@ export function MonitorDialog({
                         min={1}
                         max={60}
                         step={1}
-                        onChange={(event) =>
-                          field.onChange(Number(event.target.value))
-                        }
+                        value={field.value ?? ""}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          field.onChange(val === "" ? "" : Number(val));
+                        }}
                         aria-invalid={fieldState.invalid}
                       />
                       <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">
