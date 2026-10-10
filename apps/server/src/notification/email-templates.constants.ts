@@ -76,7 +76,9 @@ const layout = ({
   logoUrl,
   body,
   footer,
-}: LayoutOptions): string => `<!DOCTYPE html>
+}: LayoutOptions): string => {
+  const logo = logoUrl || `${process.env.FRONTEND_URL}/favicon.ico`;
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -92,7 +94,7 @@ const layout = ({
       <td align="center" style="padding:32px 16px;">
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
           <tr>
-            <td style="padding:0 4px 16px;font-family:${FONT_STACK};font-size:16px;font-weight:600;color:${COLORS.text};">${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" width="28" height="28" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;">` : ''}<span style="vertical-align:middle;">${BRAND_NAME}</span></td>
+            <td style="padding:0 4px 16px;font-family:${FONT_STACK};font-size:16px;font-weight:600;color:${COLORS.text};">${logo ? `<img src="${escapeHtml(logo)}" alt="" width="28" height="28" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;">` : ''}<span style="vertical-align:middle;">${BRAND_NAME}</span></td>
           </tr>
           <tr>
             <td style="background-color:${COLORS.card};border:1px solid ${COLORS.border};border-radius:8px;padding:32px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${COLORS.body};">
@@ -110,6 +112,7 @@ ${footer}
   </table>
 </body>
 </html>`;
+};
 
 const heading = (text: string): string =>
   `<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:600;color:${COLORS.text};">${text}</h1>`;
