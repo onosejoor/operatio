@@ -148,6 +148,7 @@ export class IncidentConsumer {
                 'A monitored service is reporting failures.',
               detectedAt: incident.detectedAt.toISOString(),
               incidentUrl: `${frontendUrl}/${incident.organization.slug}/dashboard/incidents`,
+              logoUrl: `${frontendUrl}/favicon.ico`,
             },
           }),
         ),

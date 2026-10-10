@@ -37,13 +37,17 @@ interface MonitorDialogProps {
 
 type MonitorFormValues = Pick<
   CreateMonitorInput,
-  "name" | "url" | "interval" | "isPublic"
-> & { timeoutSeconds: number; isActive: boolean };
+  "name" | "url" | "isPublic"
+> & {
+  intervalMinutes: number;
+  timeoutSeconds: number;
+  isActive: boolean;
+};
 
 const createValues: MonitorFormValues = {
   name: "",
   url: "",
-  interval: 60,
+  intervalMinutes: 1,
   timeoutSeconds: 10,
   isPublic: true,
   isActive: true,
@@ -55,10 +59,10 @@ function isValidMonitorUrl(value: string) {
     return (
       url.protocol === "http:" ||
       url.protocol === "https:" ||
-      "Enter an HTTP or HTTPS URL."
+      "Enter a web address starting with http:// or https://."
     );
   } catch {
-    return "Enter a valid URL, including https://.";
+    return "Enter a valid website or API address (for example: https://example.com).";
   }
 }
 
@@ -80,7 +84,11 @@ export function MonitorDialog({
         ? {
             name: monitor.name,
             url: monitor.url,
-            interval: monitor.interval,
+            // Convert seconds from backend to minutes for customer-friendly UI (minimum 0.5 min = 30s)
+            intervalMinutes: Math.max(
+              0.5,
+              Math.round((monitor.interval / 60) * 10) / 10,
+            ),
             timeoutSeconds: monitor.timeout / 1000,
             isPublic: monitor.isPublic,
             isActive: monitor.isActive,
@@ -102,11 +110,17 @@ export function MonitorDialog({
   }
 
   function onSubmit(input: MonitorFormValues) {
+    // Convert minutes into seconds (integer between 30 and 3600 seconds)
+    const intervalSeconds = Math.min(
+      3600,
+      Math.max(30, Math.round(input.intervalMinutes * 60)),
+    );
+
     if (!monitor) {
       const payload: CreateMonitorInput = {
         name: input.name.trim(),
         url: input.url.trim(),
-        interval: input.interval,
+        interval: intervalSeconds,
         timeout: input.timeoutSeconds * 1000,
         isPublic: input.isPublic,
       };
@@ -126,7 +140,8 @@ export function MonitorDialog({
     const url = input.url.trim();
     if (name !== monitor.name) changes.name = name;
     if (url !== monitor.url) changes.url = url;
-    if (input.interval !== monitor.interval) changes.interval = input.interval;
+    if (intervalSeconds !== monitor.interval)
+      changes.interval = intervalSeconds;
     const timeout = input.timeoutSeconds * 1000;
     if (timeout !== monitor.timeout) changes.timeout = timeout;
     if (input.isPublic !== monitor.isPublic) changes.isPublic = input.isPublic;
@@ -152,12 +167,12 @@ export function MonitorDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edit monitor" : "Add monitor"}
+            {isEditing ? "Edit monitor" : "Add a new monitor"}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? `Update the endpoint and check settings for ${monitor.name}.`
-              : "Track an HTTP or HTTPS endpoint for availability and response time."}
+              ? `Update check settings and web address for ${monitor.name}.`
+              : "Keep an eye on your website or API so you know immediately when it goes down."}
           </DialogDescription>
         </DialogHeader>
 
@@ -172,25 +187,30 @@ export function MonitorDialog({
               name="name"
               control={form.control}
               rules={{
-                required: "Enter a name for this monitor.",
+                required: "Give your monitor a friendly name.",
                 maxLength: {
                   value: 120,
                   message: "Monitor names must be 120 characters or fewer.",
                 },
                 validate: (value) =>
-                  !!value.trim() || "Enter a name for this monitor.",
+                  !!value.trim() || "Give your monitor a friendly name.",
               }}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={`${idPrefix}-name`}>Name</FieldLabel>
+                  <FieldLabel htmlFor={`${idPrefix}-name`}>
+                    Friendly name
+                  </FieldLabel>
                   <Input
                     {...field}
                     id={`${idPrefix}-name`}
-                    placeholder="Production API"
+                    placeholder="e.g. Main Website or Customer API"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
                     maxLength={120}
                   />
+                  <FieldDescription>
+                    A simple name to easily identify what you are checking.
+                  </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -202,12 +222,14 @@ export function MonitorDialog({
               name="url"
               control={form.control}
               rules={{
-                required: "Enter the URL to monitor.",
+                required: "Enter the web address to check.",
                 validate: isValidMonitorUrl,
               }}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={`${idPrefix}-url`}>URL</FieldLabel>
+                  <FieldLabel htmlFor={`${idPrefix}-url`}>
+                    Web address (URL)
+                  </FieldLabel>
                   <Input
                     {...field}
                     id={`${idPrefix}-url`}
@@ -215,9 +237,12 @@ export function MonitorDialog({
                     inputMode="url"
                     autoCapitalize="none"
                     autoCorrect="off"
-                    placeholder="https://api.example.com/health"
+                    placeholder="https://example.com"
                     aria-invalid={fieldState.invalid}
                   />
+                  <FieldDescription>
+                    The page or API endpoint to check automatically.
+                  </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -227,31 +252,38 @@ export function MonitorDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Controller
-                name="interval"
+                name="intervalMinutes"
                 control={form.control}
                 rules={{
                   validate: (value) =>
-                    (Number.isInteger(value) && value >= 30 && value <= 3600) ||
-                    "Choose an interval from 30 to 3600 seconds.",
+                    (value >= 0.5 && value <= 60) ||
+                    "Check frequency must be between 1 and 60 minutes.",
                 }}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor={`${idPrefix}-interval`}>
-                      Check interval
+                      Check every
                     </FieldLabel>
-                    <Input
-                      {...field}
-                      id={`${idPrefix}-interval`}
-                      type="number"
-                      min={30}
-                      max={3600}
-                      step={1}
-                      onChange={(event) =>
-                        field.onChange(Number(event.target.value))
-                      }
-                      aria-invalid={fieldState.invalid}
-                    />
-                    <FieldDescription>Seconds (30–3600)</FieldDescription>
+                    <div className="relative flex items-center">
+                      <Input
+                        {...field}
+                        id={`${idPrefix}-interval`}
+                        type="number"
+                        min={0.5}
+                        max={60}
+                        step={0.5}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                        aria-invalid={fieldState.invalid}
+                      />
+                      <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">
+                        mins
+                      </span>
+                    </div>
+                    <FieldDescription>
+                      How often we check (e.g. 1 min, 5 mins).
+                    </FieldDescription>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
                     )}
@@ -265,26 +297,33 @@ export function MonitorDialog({
                 rules={{
                   validate: (value) =>
                     (Number.isInteger(value) && value >= 1 && value <= 60) ||
-                    "Choose a timeout from 1 to 60 seconds.",
+                    "Timeout must be between 1 and 60 seconds.",
                 }}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor={`${idPrefix}-timeout`}>
-                      Timeout
+                      Alert timeout
                     </FieldLabel>
-                    <Input
-                      {...field}
-                      id={`${idPrefix}-timeout`}
-                      type="number"
-                      min={1}
-                      max={60}
-                      step={1}
-                      onChange={(event) =>
-                        field.onChange(Number(event.target.value))
-                      }
-                      aria-invalid={fieldState.invalid}
-                    />
-                    <FieldDescription>Seconds (1–60)</FieldDescription>
+                    <div className="relative flex items-center">
+                      <Input
+                        {...field}
+                        id={`${idPrefix}-timeout`}
+                        type="number"
+                        min={1}
+                        max={60}
+                        step={1}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                        aria-invalid={fieldState.invalid}
+                      />
+                      <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">
+                        secs
+                      </span>
+                    </div>
+                    <FieldDescription>
+                      Mark as down if no response in this time.
+                    </FieldDescription>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
                     )}
@@ -305,15 +344,15 @@ export function MonitorDialog({
                     onBlur={field.onBlur}
                     onCheckedChange={field.onChange}
                     ref={field.ref}
-                    aria-label="Allow this monitor on public status pages"
+                    aria-label="Show on public status pages"
                   />
                   <div className="space-y-1">
                     <FieldLabel htmlFor={`${idPrefix}-public`}>
-                      Allow on public status pages
+                      Show on public status page
                     </FieldLabel>
                     <FieldDescription>
-                      This monitor only appears publicly when added to a public
-                      status page.
+                      Allow customers to see this service's status on your
+                      public page.
                     </FieldDescription>
                   </div>
                 </Field>
@@ -333,15 +372,15 @@ export function MonitorDialog({
                       onBlur={field.onBlur}
                       onCheckedChange={field.onChange}
                       ref={field.ref}
-                      aria-label="Enable monitor checks"
+                      aria-label="Turn monitoring on or off"
                     />
                     <div className="space-y-1">
                       <FieldLabel htmlFor={`${idPrefix}-active`}>
-                        Monitor enabled
+                        Active monitoring
                       </FieldLabel>
                       <FieldDescription>
-                        Turn this off to pause scheduled checks. Turn it back on
-                        to resume monitoring.
+                        Turn this off if you need to temporarily pause automatic
+                        checks.
                       </FieldDescription>
                     </div>
                   </Field>

@@ -42,15 +42,15 @@ export function ServiceDetailsDialog({
         ? ("degraded" as const)
         : ("pending" as const);
 
-  let stateExplanation = "All operational checks are passing normally.";
+  let stateExplanation = "All systems and health checks are working normally.";
   if (isDown) {
     stateExplanation =
-      "Service is currently unavailable. Incident response or recovery may be active.";
+      "This service is currently unavailable. Our team is working on resolving this.";
   } else if (isSlow) {
     stateExplanation =
-      "Service response latency is currently elevated above normal thresholds.";
+      "Service is taking longer than usual to respond right now.";
   } else if (monitor.status === "PENDING") {
-    stateExplanation = "Awaiting initial health check confirmation.";
+    stateExplanation = "Checking status for the first time...";
   }
 
   return (
@@ -66,8 +66,8 @@ export function ServiceDetailsDialog({
                 <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                   {monitor.name}
                 </DialogTitle>
-                <DialogDescription className="text-xs font-mono text-muted-foreground">
-                  Service Telemetry & Performance
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Live status & performance overview
                 </DialogDescription>
               </div>
             </div>
@@ -95,20 +95,20 @@ export function ServiceDetailsDialog({
           <p className="leading-relaxed">{stateExplanation}</p>
         </div>
 
-        {/* Telemetry Grid */}
+        {/* Overview Grid */}
         <div className="space-y-4 pt-1">
           <div>
-            <h4 className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Latest Check
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Latest check result
             </h4>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {/* Status */}
               <div className="rounded-lg border border-border/40 bg-card/40 p-3">
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
                   <Activity className="h-3 w-3" />
-                  <span>Status</span>
+                  <span>Current status</span>
                 </div>
-                <div className="font-mono text-xs font-semibold text-foreground">
+                <div className="text-xs font-semibold text-foreground">
                   {config.label}
                 </div>
               </div>
@@ -118,10 +118,10 @@ export function ServiceDetailsDialog({
                 <div className="rounded-lg border border-border/40 bg-card/40 p-3">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
                     <Globe className="h-3 w-3" />
-                    <span>HTTP Code</span>
+                    <span>Response code</span>
                   </div>
                   <div className="font-mono text-xs font-semibold text-foreground">
-                    HTTP {monitor.lastStatusCode}
+                    {monitor.lastStatusCode} {monitor.lastStatusCode === 200 ? "(OK)" : ""}
                   </div>
                 </div>
               )}
@@ -131,10 +131,10 @@ export function ServiceDetailsDialog({
                 <div className="rounded-lg border border-border/40 bg-card/40 p-3">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
                     <Gauge className="h-3 w-3" />
-                    <span>Response Time</span>
+                    <span>Response speed</span>
                   </div>
                   <div className="font-mono text-xs font-semibold text-foreground">
-                    {monitor.responseTime}ms
+                    {monitor.responseTime} ms
                   </div>
                 </div>
               )}
@@ -144,18 +144,18 @@ export function ServiceDetailsDialog({
           {/* Reliability / Availability */}
           {monitor.uptime != null && (
             <div>
-              <h4 className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Reliability
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Uptime & Reliability
               </h4>
               <div className="rounded-lg border border-border/40 bg-card/40 p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-status-operational" />
                   <div>
                     <div className="text-xs font-medium text-foreground">
-                      90-Day Availability
+                      90-Day Uptime
                     </div>
-                    <div className="text-[11px] font-mono text-muted-foreground">
-                      Calculated across all periodic check probes
+                    <div className="text-[11px] text-muted-foreground">
+                      Percentage of successful checks over the past 90 days
                     </div>
                   </div>
                 </div>
@@ -169,8 +169,8 @@ export function ServiceDetailsDialog({
           {/* Compact 90-Day History */}
           {monitor.dailyUptime && monitor.dailyUptime.length > 0 && (
             <div>
-              <h4 className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                90-Day Check History
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                90-day history
               </h4>
               <div className="rounded-lg border border-border/40 bg-card/40 p-4">
                 <UptimeBars data={monitor.dailyUptime} />

@@ -136,11 +136,10 @@ export function MaintenanceWindowDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {window ? "Edit maintenance" : "Schedule maintenance"}
+            {window ? "Edit maintenance announcement" : "Schedule planned maintenance"}
           </DialogTitle>
           <DialogDescription>
-            The status page will show this notice during the next 30 days. Make
-            the page public when you are ready to notify visitors.
+            Let your customers know in advance about upcoming system updates or planned downtime.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -154,25 +153,28 @@ export function MaintenanceWindowDialog({
               name="title"
               control={form.control}
               rules={{
-                required: "Add a short title.",
+                required: "Give this maintenance a short summary.",
                 maxLength: {
                   value: 120,
                   message: "Use 120 characters or fewer.",
                 },
-                validate: (value) => !!value.trim() || "Add a short title.",
+                validate: (value) => !!value.trim() || "Give this maintenance a short summary.",
               }}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="maintenance-title">
-                    Maintenance title
+                    Summary or title
                   </FieldLabel>
                   <Input
                     {...field}
                     id="maintenance-title"
-                    placeholder="Database upgrade"
+                    placeholder="e.g. Scheduled database maintenance"
                     maxLength={120}
                     aria-invalid={fieldState.invalid}
                   />
+                  <FieldDescription>
+                    A clear headline for your customers.
+                  </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -183,11 +185,11 @@ export function MaintenanceWindowDialog({
               name="statusPageId"
               control={form.control}
               rules={{
-                required: "Choose the public status page for this notice.",
+                required: "Select where you want to publish this announcement.",
               }}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel>Status page</FieldLabel>
+                  <FieldLabel>Show on status page</FieldLabel>
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
@@ -197,7 +199,7 @@ export function MaintenanceWindowDialog({
                     }))}
                   >
                     <SelectTrigger aria-invalid={fieldState.invalid}>
-                      <SelectValue placeholder="Choose a status page" />
+                      <SelectValue placeholder="Select a status page" />
                     </SelectTrigger>
                     <SelectContent>
                       {statusPages.map((page) => (
@@ -208,6 +210,9 @@ export function MaintenanceWindowDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FieldDescription>
+                    The page where customers will see this notice.
+                  </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -226,17 +231,17 @@ export function MaintenanceWindowDialog({
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="maintenance-description">
-                    What should visitors know?
+                    Details for your customers
                   </FieldLabel>
                   <Textarea
                     {...field}
                     id="maintenance-description"
-                    placeholder="Some services may be temporarily unavailable while we complete this work."
+                    placeholder="e.g. Some services might be unavailable for about 15 minutes while we apply server updates. No user action is required."
                     maxLength={1000}
                     aria-invalid={fieldState.invalid}
                   />
                   <FieldDescription>
-                    This appears on the public status page.
+                    Explain what customers should expect during this window.
                   </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

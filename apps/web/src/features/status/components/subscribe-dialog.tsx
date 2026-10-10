@@ -32,10 +32,10 @@ export function SubscribeDialog({
             </div>
             <div>
               <DialogTitle className="text-base font-semibold">
-                Subscribe to Updates
+                Get status notifications
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Real-time operational alerts for {statusPageName}.
+                Receive notifications when {statusPageName} has updates.
               </DialogDescription>
             </div>
           </div>
@@ -43,11 +43,10 @@ export function SubscribeDialog({
 
         <div className="my-4 rounded-lg border border-border/40 bg-muted/20 p-4 text-center">
           <p className="text-sm font-medium text-foreground">
-            Notification Subscriptions Coming Soon
+            Email and text alerts coming soon
           </p>
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-            Automated alerts via email, webhook, and SMS will be enabled in an
-            upcoming release.
+            You'll soon be able to receive instant alerts directly via email and SMS whenever an incident is reported or resolved.
           </p>
         </div>
 

@@ -16,6 +16,7 @@ export interface IncidentCreatedContext {
   summary: string;
   detectedAt: string;
   incidentUrl: string;
+  logoUrl: string;
 }
 
 export interface EmailTemplateContextMap {
@@ -62,6 +63,7 @@ const escapeHtml = (value: string): string =>
 interface LayoutOptions {
   title: string;
   preheader: string;
+  logoUrl?: string;
   /** Trusted HTML. Interpolate only escaped values. */
   body: string;
   /** Trusted HTML. Interpolate only escaped values. */
@@ -71,6 +73,7 @@ interface LayoutOptions {
 const layout = ({
   title,
   preheader,
+  logoUrl,
   body,
   footer,
 }: LayoutOptions): string => `<!DOCTYPE html>
@@ -89,7 +92,7 @@ const layout = ({
       <td align="center" style="padding:32px 16px;">
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
           <tr>
-            <td style="padding:0 4px 16px;font-family:${FONT_STACK};font-size:16px;font-weight:600;color:${COLORS.text};">${BRAND_NAME}</td>
+            <td style="padding:0 4px 16px;font-family:${FONT_STACK};font-size:16px;font-weight:600;color:${COLORS.text};">${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" width="28" height="28" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;">` : ''}<span style="vertical-align:middle;">${BRAND_NAME}</span></td>
           </tr>
           <tr>
             <td style="background-color:${COLORS.card};border:1px solid ${COLORS.border};border-radius:8px;padding:32px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${COLORS.body};">
@@ -199,10 +202,12 @@ export const EMAIL_TEMPLATES: {
     const summary = escapeHtml(context.summary);
     const detectedAt = escapeHtml(context.detectedAt);
     const incidentUrl = escapeHtml(context.incidentUrl);
+    const logoUrl = context.logoUrl;
 
     return layout({
       title: `Incident detected: ${context.incidentTitle}`,
       preheader: `${context.monitorName} in ${context.organizationName}: ${context.incidentTitle}`,
+      logoUrl,
       body: [
         heading(incidentTitle),
         paragraph(

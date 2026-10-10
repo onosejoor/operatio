@@ -319,28 +319,30 @@ export function MonitorDetailView({
         </CardHeader>
         <CardContent className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <div>
-            <p className="text-muted-foreground">Check interval</p>
-            <p className="mt-1 font-mono tabular-nums">
-              {monitor.interval} sec
+            <p className="text-muted-foreground">Check frequency</p>
+            <p className="mt-1 font-medium">
+              {monitor.interval >= 60
+                ? `Every ${Math.round((monitor.interval / 60) * 10) / 10} min${monitor.interval > 60 ? "s" : ""}`
+                : `Every ${monitor.interval} secs`}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Timeout</p>
-            <p className="mt-1 font-mono tabular-nums">
-              {monitor.timeout / 1000} sec
+            <p className="text-muted-foreground">Response timeout</p>
+            <p className="mt-1 font-medium">
+              {monitor.timeout / 1000} secs
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Monitoring</p>
-            <p className="mt-1">{monitor.isActive ? "Enabled" : "Paused"}</p>
+            <p className="text-muted-foreground">Status</p>
+            <p className="mt-1 font-medium">{monitor.isActive ? "Active (Checking)" : "Paused"}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Public status pages</p>
-            <p className="mt-1">{monitor.isPublic ? "Allowed" : "Disabled"}</p>
+            <p className="text-muted-foreground">Public visibility</p>
+            <p className="mt-1 font-medium">{monitor.isPublic ? "Visible on status pages" : "Private only"}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Last checked</p>
-            <p className="mt-1">{checkedAgo(monitor.lastCheckedAt)}</p>
+            <p className="mt-1 font-medium">{checkedAgo(monitor.lastCheckedAt)}</p>
           </div>
         </CardContent>
       </Card>

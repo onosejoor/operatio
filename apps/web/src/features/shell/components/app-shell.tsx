@@ -176,6 +176,8 @@ function AppSidebar({
   onLogout,
 }: AppSidebarProps) {
   const dashboardPath = `/${encodeURIComponent(orgSlug)}/dashboard`;
+  const { isMobile, state } = useSidebar();
+  const showShortLogo = isMobile || state === "collapsed";
 
   return (
     <Sidebar collapsible="icon">
@@ -187,14 +189,25 @@ function AppSidebar({
               render={<Link href={dashboardPath} />}
               tooltip="Operatio"
             >
-              <Image
-                src="/logo.svg"
-                alt=""
-                width={150}
-                height={30}
-                priority
-                className="shrink-0 dark:invert object-contain"
-              />
+              {showShortLogo ? (
+                <Image
+                  src="/app-logo-short.svg"
+                  alt="Operatio"
+                  width={32}
+                  height={32}
+                  priority
+                  className="shrink-0 object-contain dark:invert"
+                />
+              ) : (
+                <Image
+                  src="/logo.svg"
+                  alt="Operatio"
+                  width={150}
+                  height={30}
+                  priority
+                  className="shrink-0 object-contain dark:invert"
+                />
+              )}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

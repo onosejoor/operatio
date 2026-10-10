@@ -80,11 +80,11 @@ export function ServiceMonitorCard({
 
       {/* Performance Metrics Row */}
       {hasMetrics && (
-        <div className="mt-4 flex items-center gap-6 text-xs font-mono text-muted-foreground border-t border-border/30 pt-3">
+        <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground border-t border-border/30 pt-3">
           {monitor.uptime != null && (
             <div
               className="flex items-center gap-1.5"
-              title="90-day Availability"
+              title="90-day Uptime"
             >
               <CheckCircle2 className="h-3.5 w-3.5 text-status-operational" />
               <span className="text-foreground font-semibold">
@@ -97,11 +97,11 @@ export function ServiceMonitorCard({
           {monitor.responseTime != null && (
             <div
               className="flex items-center gap-1.5"
-              title="Average Response Time"
+              title="Average response speed"
             >
               <Gauge className="h-3.5 w-3.5 text-muted-foreground/80" />
               <span className="text-foreground font-medium">
-                {monitor.responseTime}ms
+                {monitor.responseTime} ms
               </span>
             </div>
           )}
@@ -114,8 +114,8 @@ export function ServiceMonitorCard({
           <UptimeBars data={monitor.dailyUptime} />
         </div>
       ) : (
-        <div className="mt-3 text-xs font-mono text-muted-foreground/60">
-          Uptime history not available.
+        <div className="mt-3 text-xs text-muted-foreground/60">
+          Uptime history not available yet.
         </div>
       )}
 
@@ -127,9 +127,9 @@ export function ServiceMonitorCard({
             variant="ghost"
             size="sm"
             onClick={() => onViewDetails(monitor)}
-            className="h-7 gap-1 px-2 text-xs font-mono text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
           >
-            <span>Details</span>
+            <span>View details & history</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
