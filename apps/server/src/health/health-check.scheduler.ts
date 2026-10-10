@@ -18,7 +18,7 @@ export class HealthCheckScheduler {
     private readonly appConfig: AppConfigService,
   ) {}
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async checkHealthEndpoint(): Promise<void> {
     const backendUrl = this.appConfig.get('app.backendUrl').replace(/\/$/, '');
     const url = `${backendUrl}/api/v1/health`;
