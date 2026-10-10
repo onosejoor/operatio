@@ -6,6 +6,7 @@ import {
   IncidentStatus,
   IncidentSeverity,
   IncidentEventType,
+  MembershipRole,
 } from '@prisma/client';
 import { type EventMessage } from '@/infrastructure/outbox/types/outbox.types';
 import { OutboxRepository } from '@/infrastructure/outbox/repositories/outbox.repository';
@@ -14,6 +15,8 @@ import { OutboxWriter } from '../../infrastructure/outbox/writers/outbox.writer'
 import { AggregateType } from '@prisma/client';
 import { PRISMA_TRANSACTION_TIMEOUT, PrismaTransactionType } from '@/constants';
 import { randomUUID } from 'crypto';
+import { NotificationService } from '../../notification/notification.service';
+import { AppConfigService } from '../../config/service/app-config.service';
 
 const INCIDENT_FAILURE_THRESHOLD = 2; // Number of consecutive failures before creating incident
 
@@ -47,6 +50,8 @@ export class IncidentConsumer {
     private readonly outboxRepository: OutboxRepository,
     private readonly prisma: PrismaService,
     private readonly outboxWriter: OutboxWriter,
+    private readonly notificationService: NotificationService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   @EventHandler(EventType.MONITOR_STATUS_CHANGED)
@@ -101,6 +106,59 @@ export class IncidentConsumer {
     this.logger.log(
       `Incident created event received: ${payload.incidentId} for monitor ${payload.monitorId}`,
     );
+
+    const incident = await this.prisma.incident.findUnique({
+      where: { id: payload.incidentId },
+      select: {
+        title: true,
+        severity: true,
+        summary: true,
+        detectedAt: true,
+        organization: { select: { name: true, slug: true } },
+        monitor: { select: { name: true } },
+      },
+    });
+
+    if (incident) {
+      const owners = await this.prisma.membership.findMany({
+        where: {
+          organizationId: payload.organizationId,
+          role: MembershipRole.OWNER,
+        },
+        select: { user: { select: { email: true } } },
+      });
+      const recipients = [...new Set(owners.map(({ user }) => user.email))];
+      const frontendUrl = this.appConfig
+        .get('app.frontendUrl')
+        .replace(/\/$/, '');
+
+      await Promise.all(
+        recipients.map((to) =>
+          this.notificationService.sendEmail({
+            to,
+            subject: `[Operatio] Incident: ${incident.title || incident.monitor.name}`,
+            template: 'incident-created',
+            context: {
+              organizationName: incident.organization.name,
+              monitorName: incident.monitor.name,
+              incidentTitle: incident.title || 'Service incident detected',
+              severity: incident.severity || 'Unspecified',
+              summary:
+                incident.summary ||
+                'A monitored service is reporting failures.',
+              detectedAt: incident.detectedAt.toISOString(),
+              incidentUrl: `${frontendUrl}/${incident.organization.slug}/dashboard/incidents`,
+            },
+          }),
+        ),
+      );
+
+      if (recipients.length === 0) {
+        this.logger.warn(
+          `No organization owners found for incident ${payload.incidentId}`,
+        );
+      }
+    }
 
     await this.outboxRepository.markProcessedByKey(message.idempotencyKey);
   }
