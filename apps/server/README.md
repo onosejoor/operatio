@@ -125,6 +125,7 @@ You need to define the following environment variables in your `.env` file for t
 ```text
 NODE_ENV=development
 PORT=3000
+BACKEND_URL=http://localhost:3000
 DATABASE_URL=mongodb://localhost:27017/operatio
 REDIS_URL=redis://localhost:6379
 REDIS_HOST=localhost
