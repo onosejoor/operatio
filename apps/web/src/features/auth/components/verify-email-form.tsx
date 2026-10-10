@@ -7,6 +7,7 @@ import { Button } from "@operatio/ui/components/ui/button";
 import { Card } from "@operatio/ui/components/ui/card";
 import { Input } from "@operatio/ui/components/ui/input";
 import { toast } from "@operatio/ui/components/ui/sonner";
+import { getOrganizations } from "../api/auth";
 import {
   useResendVerificationMutation,
   useVerifyEmailMutation,
@@ -31,8 +32,23 @@ export function VerifyEmailForm() {
     if (!token || attemptedToken.current === token) return;
     attemptedToken.current = token;
     verifyToken(token, {
-      onSuccess: () => {
-        router.replace("/dashboard");
+      onSuccess: async () => {
+        try {
+          const organizations = await getOrganizations();
+          const organization = organizations[0];
+          if (!organization) {
+            toast.error("Your account is not a member of an organization yet.");
+            return;
+          }
+
+          router.replace(`/${encodeURIComponent(organization.slug)}/dashboard`);
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Unable to load your workspace.",
+          );
+        }
       },
       onError: (error) => toast.error(error.message),
     });
