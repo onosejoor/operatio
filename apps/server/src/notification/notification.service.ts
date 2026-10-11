@@ -25,6 +25,6 @@ export class NotificationService {
       subject: job.subject,
       html,
     });
-    this.logger.log(`Email sent with template: ${job.template}`);
+    this.logger.log(`Email sent with template: ${job.template} to ${job.to}`);
   }
 }
