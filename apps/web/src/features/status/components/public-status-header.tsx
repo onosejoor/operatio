@@ -5,10 +5,12 @@ import { Bell, RefreshCw } from "lucide-react";
 import { Button } from "@operatio/ui/components/ui/button";
 import { Badge } from "@operatio/ui/components/ui/badge";
 import Image from "next/image";
+import Link from "next/link";
 import { SubscribeDialog } from "./subscribe-dialog";
 import { StatusNavigation } from "./status-navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { statusKeys, usePublicStatus } from "../hooks/use-public-status";
+import { useStatusNavigation } from "../hooks/use-status-navigation";
 import { useParams } from "next/navigation";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
@@ -18,6 +20,7 @@ export function PublicStatusHeader() {
   const [isSubscribeOpen, setIsSubscribeOpen] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { slug } = useParams<{ slug: string }>();
+  const { overviewHref } = useStatusNavigation();
 
   const queryClient = useQueryClient();
 
@@ -58,7 +61,10 @@ export function PublicStatusHeader() {
       <header className="sticky top-3 z-50 w-full px-4 sm:px-6">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 rounded-full border border-border/60 bg-background/70 px-3.5 sm:px-4 shadow-lg shadow-black/3 backdrop-blur-md backdrop-saturate-150 transition-all dark:shadow-black/20">
           {/* Left: Brand Identity */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <Link
+            href={overviewHref}
+            className="flex items-center gap-2.5 min-w-0 transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+          >
             {statusPage.logo ? (
               <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background p-1 shadow-2xs">
                 <Image
@@ -70,7 +76,14 @@ export function PublicStatusHeader() {
                 />
               </div>
             ) : (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold shadow-2xs" style={{ color: statusPage.brandColor ?? "#2563eb", borderColor: statusPage.brandColor ?? "#2563eb", backgroundColor: `${statusPage.brandColor ?? "#2563eb"}14` }}>
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold shadow-2xs"
+                style={{
+                  color: statusPage.brandColor ?? "#2563eb",
+                  borderColor: statusPage.brandColor ?? "#2563eb",
+                  backgroundColor: `${statusPage.brandColor ?? "#2563eb"}14`,
+                }}
+              >
                 {statusPage.name.slice(0, 2).toUpperCase()}
               </div>
             )}
@@ -93,7 +106,7 @@ export function PublicStatusHeader() {
                 </span>
               ) : null}
             </div>
-          </div>
+          </Link>
 
           {/* Center: Floating Navigation */}
           <StatusNavigation />
@@ -128,7 +141,10 @@ export function PublicStatusHeader() {
               size="sm"
               variant="default"
               className="h-7 sm:h-8 gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs active:scale-95 transition-all"
-              style={{ backgroundColor: statusPage.brandColor ?? "#2563eb", color: "white" }}
+              style={{
+                backgroundColor: statusPage.brandColor ?? "#2563eb",
+                color: "white",
+              }}
             >
               <Bell className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               <span className="text-[11px] sm:text-xs">Subscribe</span>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Globe } from "lucide-react";
 import { useParams } from "next/navigation";
+import { useStatusNavigation } from "../hooks/use-status-navigation";
 
 export function PublicStatusFooter({
   statusPageName,
@@ -12,6 +13,7 @@ export function PublicStatusFooter({
 }) {
   const [utcTime, setUtcTime] = useState<string>("");
   const { slug } = useParams<{ slug: string }>();
+  const { unsubscribeHref } = useStatusNavigation();
 
   const pageName = statusPageName ?? slug;
   // if (!window) {
@@ -48,7 +50,7 @@ export function PublicStatusFooter({
           {slug && (
             <>
               <Link
-                href={`/status/${slug}/unsubscribe`}
+                href={unsubscribeHref}
                 className="text-muted-foreground hover:text-foreground transition-colors hover:underline"
               >
                 Unsubscribe

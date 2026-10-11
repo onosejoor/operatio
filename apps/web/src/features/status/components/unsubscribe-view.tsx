@@ -15,6 +15,7 @@ import {
 } from "@operatio/ui/components/ui/card";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { useUnsubscribeStatusPage } from "../hooks/use-public-status";
+import { useStatusNavigation } from "../hooks/use-status-navigation";
 import type { PublicStatusResponse } from "../types/public-status";
 
 interface UnsubscribeViewProps {
@@ -31,6 +32,7 @@ export function UnsubscribeView({
   const [email, setEmail] = useState(initialEmail);
   const [isSuccess, setIsSuccess] = useState(false);
   const unsubscribeMutation = useUnsubscribeStatusPage(slug);
+  const { overviewHref } = useStatusNavigation();
 
   const statusPageName = initialData?.statusPage.name || "Status Page";
 
@@ -92,7 +94,7 @@ export function UnsubscribeView({
 
             <div className="pt-2">
               <Link
-                href={`/status/${slug}`}
+                href={overviewHref}
                 className={buttonVariants({
                   variant: "outline",
                   size: "sm",
@@ -143,7 +145,7 @@ export function UnsubscribeView({
                 Unsubscribe
               </Button>
               <Link
-                href={`/status/${slug}`}
+                href={overviewHref}
                 className={buttonVariants({
                   variant: "ghost",
                   size: "sm",
