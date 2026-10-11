@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Patch,
+  Body,
   Param,
   Query,
   UseGuards,
@@ -12,6 +14,7 @@ import { OrganizationMembershipGuard } from '../common/guards/organization-membe
 import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
 import { CurrentOrganizationId } from '../organizations/decorators/current-organization-id.decorator';
 import { IncidentsService } from './incidents.service';
+import { IncidentStatus } from '@prisma/client';
 
 @ApiTags('incidents')
 @Controller('organizations/:organizationId/monitors/:monitorId/incidents')
@@ -70,6 +73,24 @@ export class OrganizationIncidentsController {
   ) {
     return ApiResponseDto.success(
       await this.incidentsService.getIncidentById(organizationId, incidentId),
+    );
+  }
+
+  @Patch(':incidentId/status')
+  @ApiOperation({ summary: 'Update status of an incident' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async updateIncidentStatus(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('incidentId') incidentId: string,
+    @Body() body: { status: IncidentStatus; message?: string },
+  ) {
+    return ApiResponseDto.success(
+      await this.incidentsService.updateIncidentStatus(
+        organizationId,
+        incidentId,
+        body,
+      ),
+      'Incident status updated successfully',
     );
   }
 }

@@ -30,7 +30,7 @@ export function StatusNavigation() {
   ];
 
   return (
-    <nav className="flex items-center gap-1 rounded-full border border-border/40 bg-muted/40 p-0.5 text-xs font-medium text-muted-foreground w-fit">
+    <nav className="hidden sm:flex items-center gap-1 rounded-full border border-border/40 bg-muted/40 p-0.5 text-xs font-medium text-muted-foreground w-fit">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = path === tab.href;

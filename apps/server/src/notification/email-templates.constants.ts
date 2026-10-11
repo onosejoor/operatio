@@ -17,6 +17,7 @@ export interface IncidentCreatedContext {
   detectedAt: string;
   incidentUrl: string;
   logoUrl: string;
+  unsubscribeUrl?: string;
 }
 
 export interface EmailTemplateContextMap {
@@ -225,7 +226,9 @@ export const EMAIL_TEMPLATES: {
         paragraph(summary, 8),
         button(incidentUrl, 'View incident'),
       ].join('\n'),
-      footer: `You are receiving this alert because you are an owner of ${organizationName} on ${BRAND_NAME}.`,
+      footer: context.unsubscribeUrl
+        ? `You are receiving this update because you subscribed to status alerts for ${organizationName}. <a href="${escapeHtml(context.unsubscribeUrl)}" style="color:${COLORS.accent};">Unsubscribe</a>`
+        : `You are receiving this alert because you are an owner of ${organizationName} on ${BRAND_NAME}.`,
     });
   },
 };

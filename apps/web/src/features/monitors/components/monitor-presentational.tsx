@@ -141,14 +141,14 @@ export function MonitorResponseCell({ monitor }: { monitor: MonitorSummary }) {
 export const monitorColumns: Column<MonitorSummary>[] = [
   {
     header: "Monitor",
-    className: "pl-6",
+    className: "pl-4 sm:pl-6 min-w-[140px]",
     cell: (monitor) => (
-      <div className="max-w-0 sm:max-w-xs">
-        <div className="truncate font-medium">{monitor.name}</div>
+      <div className="min-w-0 max-w-[180px] sm:max-w-xs">
+        <div className="truncate font-medium text-sm">{monitor.name}</div>
         <div className="truncate font-mono text-xs text-muted-foreground">
           {monitor.url}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground sm:hidden">
+        <div className="mt-1 text-[11px] text-muted-foreground sm:hidden">
           {responseLabel(monitor)} · {checkedAgo(monitor.lastCheckedAt)}
         </div>
       </div>
@@ -156,6 +156,7 @@ export const monitorColumns: Column<MonitorSummary>[] = [
   },
   {
     header: "Status",
+    className: "whitespace-nowrap",
     cell: (monitor) => (
       <MonitorStatusBadge status={monitor.status} isActive={monitor.isActive} />
     ),

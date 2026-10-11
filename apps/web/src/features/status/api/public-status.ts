@@ -17,3 +17,27 @@ export async function getPublicStatusMetrics(slug: string) {
 
   return response.data;
 }
+
+export async function subscribeToStatusPage(slug: string, email: string) {
+  const response = await apiFetch<ApiResponse<{ message: string }>>(
+    `/public/status/${slug}/subscribe`,
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    },
+  );
+
+  return response.data;
+}
+
+export async function unsubscribeFromStatusPage(slug: string, email: string) {
+  const response = await apiFetch<ApiResponse<{ message: string }>>(
+    `/public/status/${slug}/unsubscribe`,
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    },
+  );
+
+  return response.data;
+}

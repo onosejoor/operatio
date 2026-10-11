@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Globe } from "lucide-react";
 import { useParams } from "next/navigation";
 
@@ -44,10 +45,24 @@ export function PublicStatusFooter({
         </div>
 
         <div className="flex items-center gap-4 text-xs">
+          {slug && (
+            <>
+              <Link
+                href={`/status/${slug}/unsubscribe`}
+                className="text-muted-foreground hover:text-foreground transition-colors hover:underline"
+              >
+                Unsubscribe
+              </Link>
+              <span className="text-border">·</span>
+            </>
+          )}
           <p>
             Powered by{" "}
             <a
-              href="https://operatio.ai"
+              href={
+                process.env.NEXT_PUBLIC_APP_URL ||
+                "https://useoperatio.vercel.app"
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-foreground transition-colors hover:underline"

@@ -50,10 +50,10 @@ export function ServiceMonitorCard({
       }`}
     >
       {/* Top Header Row: Service Name & Status Badge */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <StatusDot className={config.dotClass} pulse={!isUp} />
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
+          <h3 className="text-sm sm:text-base font-semibold tracking-tight text-foreground truncate">
             {monitor.name}
           </h3>
         </div>

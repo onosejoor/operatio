@@ -49,6 +49,12 @@ export interface MonitorStats {
   }>;
 }
 
+export type IncidentStatus =
+  | "INVESTIGATING"
+  | "IDENTIFIED"
+  | "MONITORING"
+  | "RESOLVED";
+
 export interface CreateMonitorInput {
   name: string;
   url: string;
@@ -125,7 +131,8 @@ export function getMonitorStats(organizationId: string, monitorId: string) {
   return apiFetch<ApiResponse<MonitorStats>>(
     `/organizations/${organizationId}/monitors/${monitorId}/stats`,
   ).then((response) => {
-    if (!response.data) throw new Error("Monitor statistics could not be loaded.");
+    if (!response.data)
+      throw new Error("Monitor statistics could not be loaded.");
     return response.data;
   });
 }
@@ -163,4 +170,18 @@ export function getIncidents(organizationId: string) {
       ...remainingPages.map((page) => page?.data ?? []),
     );
   });
+}
+
+export function updateIncidentStatus(
+  organizationId: string,
+  incidentId: string,
+  input: { status: IncidentStatus; message?: string },
+) {
+  return apiFetch<ApiResponse<IncidentSummary>>(
+    `/organizations/${organizationId}/incidents/${incidentId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  ).then((response) => response.data);
 }

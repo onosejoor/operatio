@@ -123,7 +123,7 @@ export function StatusPageDetailView({
   const attached = pageMonitors.data ?? [];
   const attachedIds = new Set(attached.map((entry) => entry.monitorId));
   const available = (monitors.data ?? []).filter(
-    (monitor) => monitor.isActive && monitor.isPublic && !attachedIds.has(monitor.id),
+    (monitor) => !attachedIds.has(monitor.id),
   );
 
   const columns: Column<StatusPageMonitor>[] = [
@@ -200,9 +200,17 @@ export function StatusPageDetailView({
           <CardDescription>Set the public page name, description, URL, and brand color.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-sm">
-            <span className="size-8 rounded-lg border" style={{ backgroundColor: page.data.brandColor ?? "#2563eb" }} aria-label={`Brand color ${page.data.brandColor ?? "#2563eb"}`} />
-            <span><span className="block font-medium">Brand color</span><span className="font-mono text-xs text-muted-foreground">{page.data.brandColor ?? "#2563eb"}</span></span>
+          <div className="flex flex-wrap items-center gap-6 text-sm">
+            <div className="flex items-center gap-3">
+              <span className="size-8 rounded-lg border" style={{ backgroundColor: page.data.brandColor ?? "#2563eb" }} aria-label={`Brand color ${page.data.brandColor ?? "#2563eb"}`} />
+              <span><span className="block font-medium">Brand color</span><span className="font-mono text-xs text-muted-foreground">{page.data.brandColor ?? "#2563eb"}</span></span>
+            </div>
+            {page.data.logo ? (
+              <div className="flex items-center gap-3">
+                <img src={page.data.logo} alt="Logo preview" className="size-8 rounded-lg border object-contain p-0.5 bg-background" />
+                <span><span className="block font-medium">Logo</span><span className="truncate max-w-[150px] font-mono text-xs text-muted-foreground block">{page.data.logo}</span></span>
+              </div>
+            ) : null}
           </div>
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil aria-hidden="true" /> Edit page settings</Button>
         </CardContent>

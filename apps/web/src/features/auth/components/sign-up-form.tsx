@@ -119,19 +119,47 @@ export function SignUpForm() {
               "Password doesn't meet all the requirements.",
             deps: ["confirmPassword"],
           }}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-up-password">Password</FieldLabel>
-              <Input
-                {...field}
-                id="sign-up-password"
-                type="password"
-                autoComplete="new-password"
-                aria-invalid={fieldState.invalid}
-              />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
+          render={({ field, fieldState }) => {
+            const currentPassword = field.value || "";
+            return (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="sign-up-password">Password</FieldLabel>
+                <Input
+                  {...field}
+                  id="sign-up-password"
+                  type="password"
+                  autoComplete="new-password"
+                  aria-invalid={fieldState.invalid}
+                />
+                <div className="mt-2 space-y-1 rounded-lg border bg-muted/30 p-2.5 text-xs">
+                  <p className="font-medium text-foreground">Password requirements:</p>
+                  <ul className="space-y-1 text-muted-foreground">
+                    {passwordRules.map((rule) => {
+                      const passed = rule.test(currentPassword);
+                      return (
+                        <li
+                          key={rule.label}
+                          className={`flex items-center gap-1.5 transition-colors ${
+                            passed
+                              ? "font-medium text-status-operational-text"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block size-1.5 rounded-full ${
+                              passed ? "bg-status-operational" : "bg-muted-foreground/40"
+                            }`}
+                          />
+                          {rule.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            );
+          }}
         />
         <Controller
           name="confirmPassword"

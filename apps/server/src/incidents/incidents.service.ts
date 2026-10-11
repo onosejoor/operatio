@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/database.service';
+import { IncidentStatus } from '@prisma/client';
 
 @Injectable()
 export class IncidentsService {
@@ -160,5 +161,62 @@ export class IncidentsService {
     }
 
     return this.toIncidentResponse(incident);
+  }
+
+  async updateIncidentStatus(
+    organizationId: string,
+    incidentId: string,
+    data: {
+      status: IncidentStatus;
+      message?: string;
+    },
+  ) {
+    const incident = await this.prisma.incident.findFirst({
+      where: { id: incidentId, organizationId },
+    });
+
+    if (!incident) {
+      throw new NotFoundException('Incident not found');
+    }
+
+    const isResolved = data.status === 'RESOLVED';
+    const now = new Date();
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // 1. Create the new incident event
+      await tx.incidentEvent.create({
+        data: {
+          incidentId,
+          status: data.status,
+          message:
+            data.message ||
+            `Incident status updated to ${data.status.toLowerCase()}`,
+          type: 'STATUS_UPDATE',
+        },
+      });
+
+      // 2. Update the incident record
+      return tx.incident.update({
+        where: { id: incidentId },
+        data: {
+          status: data.status,
+          ...(isResolved && !incident.resolvedAt
+            ? {
+                resolvedAt: now,
+                durationMs: now.getTime() - incident.detectedAt.getTime(),
+              }
+            : {}),
+          ...(!isResolved && incident.resolvedAt
+            ? {
+                resolvedAt: null,
+                durationMs: null,
+              }
+            : {}),
+        },
+        select: this.selectFields,
+      });
+    });
+
+    return this.toIncidentResponse(updated);
   }
 }

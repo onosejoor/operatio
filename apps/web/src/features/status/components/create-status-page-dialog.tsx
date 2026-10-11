@@ -39,6 +39,7 @@ const defaults: StatusPageInput = {
   name: "",
   slug: "",
   description: "",
+  logo: "",
   isPublic: false,
   brandColor: "#2563eb",
 };
@@ -57,6 +58,7 @@ export function StatusPageDialog({
           name: page.name,
           slug: page.slug,
           description: page.description ?? "",
+          logo: page.logo ?? "",
           isPublic: page.isPublic,
           brandColor: page.brandColor ?? defaults.brandColor,
         }
@@ -75,6 +77,7 @@ export function StatusPageDialog({
               name: page.name,
               slug: page.slug,
               description: page.description ?? "",
+              logo: page.logo ?? "",
               isPublic: page.isPublic,
               brandColor: page.brandColor ?? defaults.brandColor,
             }
@@ -87,6 +90,7 @@ export function StatusPageDialog({
       name: values.name.trim(),
       slug: values.slug.trim().toLowerCase(),
       description: values.description?.trim() || "",
+      logo: values.logo?.trim() || undefined,
       isPublic: values.isPublic,
       brandColor: values.brandColor,
     };
@@ -109,9 +113,11 @@ export function StatusPageDialog({
             payload[key] !==
             (key === "description"
               ? (page.description ?? "")
-              : key === "brandColor"
-                ? (page.brandColor ?? defaults.brandColor)
-                : page[key]),
+              : key === "logo"
+                ? (page.logo ?? "")
+                : key === "brandColor"
+                  ? (page.brandColor ?? defaults.brandColor)
+                  : page[key]),
         )
         .map((key) => [key, payload[key]]),
     ) as Partial<StatusPageInput>;
@@ -247,6 +253,36 @@ export function StatusPageDialog({
                   />
                   <FieldDescription>
                     A short note shown to your visitors below the title.
+                  </FieldDescription>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="logo"
+              control={form.control}
+              rules={{
+                validate: (value) =>
+                  !value ||
+                  /^https?:\/\/.+/.test(value.trim()) ||
+                  "Enter a valid image URL starting with http:// or https://",
+              }}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="status-page-logo">
+                    Logo image URL
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="status-page-logo"
+                    type="url"
+                    placeholder="https://example.com/logo.png"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <FieldDescription>
+                    A link to your company or brand logo image (.png, .svg, .jpg).
                   </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

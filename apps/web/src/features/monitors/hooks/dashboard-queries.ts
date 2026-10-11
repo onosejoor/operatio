@@ -13,6 +13,8 @@ import {
   type MonitorSummary,
   type UpdateMonitorInput,
   updateMonitor,
+  updateIncidentStatus,
+  IncidentStatus,
 } from "../api/monitors";
 
 export const monitorKeys = {
@@ -27,7 +29,17 @@ export const monitorKeys = {
     status?: MonitorSummary["status"],
     sort?: MonitorCheckSort,
     fromDate?: string,
-  ) => ["monitors", organizationId, monitorId, "checks", page, status, sort, fromDate] as const,
+  ) =>
+    [
+      "monitors",
+      organizationId,
+      monitorId,
+      "checks",
+      page,
+      status,
+      sort,
+      fromDate,
+    ] as const,
   stats: (organizationId: string, monitorId: string) =>
     ["monitors", organizationId, monitorId, "stats"] as const,
   incidents: (organizationId: string) => ["incidents", organizationId] as const,
@@ -66,8 +78,24 @@ export function useMonitorChecks(
   fromDate?: string,
 ) {
   return useQuery({
-    queryKey: monitorKeys.checks(organizationId ?? "", monitorId ?? "", page, status, sort, fromDate),
-    queryFn: () => getMonitorChecks(organizationId!, monitorId!, page, 10, status, sort, fromDate),
+    queryKey: monitorKeys.checks(
+      organizationId ?? "",
+      monitorId ?? "",
+      page,
+      status,
+      sort,
+      fromDate,
+    ),
+    queryFn: () =>
+      getMonitorChecks(
+        organizationId!,
+        monitorId!,
+        page,
+        10,
+        status,
+        sort,
+        fromDate,
+      ),
     enabled: !!organizationId && !!monitorId,
   });
 }
@@ -80,18 +108,21 @@ export function useUpdateMonitor(organizationId: string, monitorId: string) {
       updateMonitor(organizationId, monitorId, input),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: monitorKeys.list(organizationId) }),
-        queryClient.invalidateQueries({ queryKey: monitorKeys.detail(organizationId, monitorId) }),
-        queryClient.invalidateQueries({ queryKey: monitorKeys.stats(organizationId, monitorId) }),
+        queryClient.invalidateQueries({
+          queryKey: monitorKeys.list(organizationId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: monitorKeys.detail(organizationId, monitorId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: monitorKeys.stats(organizationId, monitorId),
+        }),
       ]);
     },
   });
 }
 
-export function useMonitorStats(
-  organizationId?: string,
-  monitorId?: string,
-) {
+export function useMonitorStats(organizationId?: string, monitorId?: string) {
   return useQuery({
     queryKey: monitorKeys.stats(organizationId ?? "", monitorId ?? ""),
     queryFn: () => getMonitorStats(organizationId!, monitorId!),
@@ -109,5 +140,26 @@ export function useCreateMonitor(organizationId: string) {
       queryClient.invalidateQueries({
         queryKey: monitorKeys.list(organizationId),
       }),
+  });
+}
+
+export function useUpdateIncidentStatus(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      incidentId,
+      status,
+      message,
+    }: {
+      incidentId: string;
+      status: IncidentStatus;
+      message?: string;
+    }) => updateIncidentStatus(organizationId, incidentId, { status, message }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: monitorKeys.incidents(organizationId),
+      });
+    },
   });
 }

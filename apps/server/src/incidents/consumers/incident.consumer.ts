@@ -127,13 +127,31 @@ export class IncidentConsumer {
         },
         select: { user: { select: { email: true } } },
       });
-      const recipients = [...new Set(owners.map(({ user }) => user.email))];
+
+      // Find status pages that include this monitor and collect their subscribers
+      const statusPageMonitors = await this.prisma.statusPageMonitor.findMany({
+        where: { monitorId: payload.monitorId },
+        select: {
+          statusPage: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              isPublic: true,
+              subscribers: { select: { email: true } },
+            },
+          },
+        },
+      });
+
       const frontendUrl = this.appConfig
         .get('app.frontendUrl')
         .replace(/\/$/, '');
 
+      // Send to organization owners
+      const ownerEmails = [...new Set(owners.map(({ user }) => user.email))];
       await Promise.all(
-        recipients.map((to) =>
+        ownerEmails.map((to) =>
           this.notificationService.sendEmail({
             to,
             subject: `[Operatio] Incident: ${incident.title || incident.monitor.name}`,
@@ -154,9 +172,46 @@ export class IncidentConsumer {
         ),
       );
 
-      if (recipients.length === 0) {
+      // Send to public status page subscribers (excluding already-emailed owners)
+      const emailedEmails = new Set(ownerEmails);
+      const subscriberTasks: Promise<any>[] = [];
+
+      for (const spm of statusPageMonitors) {
+        if (spm.statusPage.isPublic && spm.statusPage.subscribers) {
+          const slug = spm.statusPage.slug;
+          for (const sub of spm.statusPage.subscribers) {
+            if (!emailedEmails.has(sub.email)) {
+              emailedEmails.add(sub.email);
+              subscriberTasks.push(
+                this.notificationService.sendEmail({
+                  to: sub.email,
+                  subject: `[${spm.statusPage.name}] Incident: ${incident.title || incident.monitor.name}`,
+                  template: 'incident-created',
+                  context: {
+                    organizationName: spm.statusPage.name,
+                    monitorName: incident.monitor.name,
+                    incidentTitle: incident.title || 'Service incident detected',
+                    severity: incident.severity || 'Unspecified',
+                    summary:
+                      incident.summary ||
+                      'A monitored service is reporting failures.',
+                    detectedAt: incident.detectedAt.toISOString(),
+                    incidentUrl: `${frontendUrl}/status/${slug}`,
+                    logoUrl: `${frontendUrl}/favicon.ico`,
+                    unsubscribeUrl: `${frontendUrl}/status/${slug}/unsubscribe?email=${encodeURIComponent(sub.email)}`,
+                  },
+                }),
+              );
+            }
+          }
+        }
+      }
+
+      await Promise.all(subscriberTasks);
+
+      if (emailedEmails.size === 0) {
         this.logger.warn(
-          `No organization owners found for incident ${payload.incidentId}`,
+          `No recipients found for incident ${payload.incidentId}`,
         );
       }
     }

@@ -131,7 +131,7 @@ export function IncidentsView({ orgSlug }: { orgSlug: string }) {
             {activeIncidents.length}
           </span>
         </div>
-        <ActiveIncidents incidents={activeIncidents} />
+        <ActiveIncidents incidents={activeIncidents} organizationId={organization.id} />
       </section>
 
       <section aria-labelledby="incident-history-heading" className="space-y-4">

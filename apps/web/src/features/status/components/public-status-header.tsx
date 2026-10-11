@@ -141,6 +141,7 @@ export function PublicStatusHeader() {
         isOpen={isSubscribeOpen}
         onClose={() => setIsSubscribeOpen(false)}
         statusPageName={statusPage.name}
+        slug={slug}
       />
     </>
   );

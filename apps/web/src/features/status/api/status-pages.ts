@@ -17,6 +17,7 @@ export interface StatusPageInput {
   name: string;
   slug: string;
   description?: string;
+  logo?: string;
   isPublic: boolean;
   brandColor: string;
 }

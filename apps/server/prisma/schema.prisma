@@ -309,9 +309,23 @@ model StatusPage {
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   statusPageMonitors StatusPageMonitor[]
   maintenanceWindows MaintenanceWindow[]
+  subscribers        StatusPageSubscriber[]
 
   @@index([organizationId])
   @@map("status_pages")
+}
+
+model StatusPageSubscriber {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  statusPageId String   @db.ObjectId
+  email        String
+  createdAt    DateTime @default(now())
+
+  statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+
+  @@unique([statusPageId, email])
+  @@index([statusPageId])
+  @@map("status_page_subscribers")
 }
 
 model StatusPageMonitor {

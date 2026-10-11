@@ -1,3 +1,5 @@
+"use client";
+
 import {
   PublicIncident,
   PublicIncidentEvent,
@@ -13,10 +15,23 @@ import {
   Search,
   Eye,
   Activity,
+  ChevronDown,
+  Send,
 } from "lucide-react";
 import { Card } from "@operatio/ui/components/ui/card";
 import { Badge } from "@operatio/ui/components/ui/badge";
+import { Button } from "@operatio/ui/components/ui/button";
+import { Textarea } from "@operatio/ui/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@operatio/ui/components/ui/dropdown-menu";
 import { cn } from "@operatio/ui/lib/utils";
+import { useState } from "react";
+import { useUpdateIncidentStatus } from "@app/features/monitors/hooks/dashboard-queries";
+import { toast } from "sonner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -128,12 +143,129 @@ function IncidentEventLog({ events }: { events: PublicIncidentEvent[] }) {
   );
 }
 
+// ─── Status Updater ───────────────────────────────────────────────────────────
+
+const STATUS_OPTIONS = [
+  { value: "INVESTIGATING", label: "Investigating" },
+  { value: "IDENTIFIED", label: "Identified" },
+  { value: "MONITORING", label: "Monitoring" },
+  { value: "RESOLVED", label: "Resolved" },
+] as const;
+
+function IncidentStatusUpdater({
+  incidentId,
+  organizationId,
+  currentStatus,
+}: {
+  incidentId: string;
+  organizationId: string;
+  currentStatus: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<
+    (typeof STATUS_OPTIONS)[number]["value"]
+  >(currentStatus as (typeof STATUS_OPTIONS)[number]["value"] ?? "INVESTIGATING");
+  const [message, setMessage] = useState("");
+  const mutation = useUpdateIncidentStatus(organizationId);
+
+  function handleSubmit() {
+    mutation.mutate(
+      { incidentId, status: selectedStatus, message: message.trim() || undefined },
+      {
+        onSuccess: () => {
+          toast.success("Status updated");
+          setOpen(false);
+          setMessage("");
+        },
+        onError: (err: Error) => {
+          toast.error(err.message ?? "Failed to update status");
+        },
+      },
+    );
+  }
+
+  if (!open) {
+    return (
+      <div className="mt-4 border-t border-border/30 pt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => setOpen(true)}
+        >
+          <Send className="h-3 w-3" />
+          Post status update
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 border-t border-border/30 pt-4 space-y-3">
+      <p className="text-xs font-medium text-foreground">Post status update</p>
+
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground shrink-0">Status:</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex items-center gap-1.5 h-7 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              {lifecycleIcon(selectedStatus)}
+              {STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus}
+              <ChevronDown className="h-3 w-3 opacity-60" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-40">
+            {STATUS_OPTIONS.map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                className="text-xs gap-2"
+                onSelect={() => setSelectedStatus(opt.value)}
+              >
+                {lifecycleIcon(opt.value)}
+                {opt.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Textarea
+        placeholder="Optional message for subscribers and the public timeline…"
+        className="text-xs min-h-[70px] resize-none"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+      />
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={handleSubmit}
+          disabled={mutation.isPending}
+        >
+          <Send className="h-3 w-3" />
+          {mutation.isPending ? "Posting…" : "Post update"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => { setOpen(false); setMessage(""); }}
+          disabled={mutation.isPending}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Active Incidents ─────────────────────────────────────────────────────────
 
 export function ActiveIncidents({
   incidents,
+  organizationId,
 }: {
   incidents: PublicIncident[];
+  organizationId?: string;
 }) {
   const active = incidents.filter((i) => i.status === "active");
 
@@ -221,6 +353,15 @@ export function ActiveIncidents({
 
             {/* Event log */}
             <IncidentEventLog events={incident.events ?? []} />
+
+            {/* Dashboard-only: status update panel */}
+            {organizationId && (
+              <IncidentStatusUpdater
+                incidentId={incident.id}
+                organizationId={organizationId}
+                currentStatus={currentStatus}
+              />
+            )}
           </Card>
         );
       })}

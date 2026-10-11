@@ -1,15 +1,18 @@
 import { getPublicStatus } from "@app/features/status/api/public-status";
-import { StatusPageView } from "@app/features/status/components/status-page-view";
+import { UnsubscribeView } from "@app/features/status/components/unsubscribe-view";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { notFound } from "next/navigation";
 
-interface StatusPageProps {
+interface UnsubscribePageProps {
   params: Promise<{
     slug: string;
   }>;
+  searchParams: Promise<{
+    email?: string;
+  }>;
 }
 
-export async function generateMetadata({ params }: StatusPageProps) {
+export async function generateMetadata({ params }: UnsubscribePageProps) {
   const { slug } = await params;
 
   try {
@@ -22,10 +25,8 @@ export async function generateMetadata({ params }: StatusPageProps) {
     const logo = statusPage.statusPage.logo;
 
     return {
-      title: `${statusPage.statusPage.name} Status`,
-      description:
-        statusPage.statusPage.description ||
-        "Real-time status updates for our services.",
+      title: `Unsubscribe - ${statusPage.statusPage.name} Status`,
+      description: `Unsubscribe from ${statusPage.statusPage.name} status notifications.`,
       icons: logo
         ? {
             icon: logo,
@@ -39,16 +40,21 @@ export async function generateMetadata({ params }: StatusPageProps) {
   }
 }
 
-export default async function StatusPage({ params }: StatusPageProps) {
+export default async function UnsubscribePage({
+  params,
+  searchParams,
+}: UnsubscribePageProps) {
   const { slug } = await params;
+  const { email } = await searchParams;
 
   try {
     const initialData = await getPublicStatus(slug);
 
     return (
-      <StatusPageView
+      <UnsubscribeView
         slug={slug}
         initialData={initialData}
+        initialEmail={email}
       />
     );
   } catch {

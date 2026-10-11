@@ -536,4 +536,52 @@ export class PublicStatusService {
       averageIncidentDuration,
     };
   }
+
+  async subscribe(slug: string, email: string): Promise<{ message: string }> {
+    const statusPage = await this.getStatusPage(slug);
+    if (!statusPage || !statusPage.isPublic) {
+      throw new NotFoundException('Status page not found');
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if already subscribed
+    const existing = await this.prisma.statusPageSubscriber.findFirst({
+      where: {
+        statusPageId: statusPage.id,
+        email: normalizedEmail,
+      },
+    });
+
+    if (existing) {
+      return { message: 'You are already subscribed to updates for this status page.' };
+    }
+
+    await this.prisma.statusPageSubscriber.create({
+      data: {
+        statusPageId: statusPage.id,
+        email: normalizedEmail,
+      },
+    });
+
+    return { message: 'Successfully subscribed to status updates.' };
+  }
+
+  async unsubscribe(slug: string, email: string): Promise<{ message: string }> {
+    const statusPage = await this.getStatusPage(slug);
+    if (!statusPage || !statusPage.isPublic) {
+      throw new NotFoundException('Status page not found');
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    await this.prisma.statusPageSubscriber.deleteMany({
+      where: {
+        statusPageId: statusPage.id,
+        email: normalizedEmail,
+      },
+    });
+
+    return { message: 'Successfully unsubscribed from status updates.' };
+  }
 }

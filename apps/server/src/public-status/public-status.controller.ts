@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Param,
   HttpCode,
   HttpStatus,
@@ -63,5 +65,37 @@ export class PublicStatusController {
     return ApiResponseDto.success(
       await this.publicStatusService.getMetrics(statusPage.id),
     );
+  }
+
+  @Post(':slug/subscribe')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Subscribe email to status page updates' })
+  @ApiResponse({
+    status: 200,
+    description: 'Subscribed successfully',
+    type: ApiResponseDto,
+  })
+  async subscribe(
+    @Param('slug') slug: string,
+    @Body('email') email: string,
+  ): Promise<ApiResponseDto<{ message: string }>> {
+    const result = await this.publicStatusService.subscribe(slug, email);
+    return ApiResponseDto.success(result, result.message);
+  }
+
+  @Post(':slug/unsubscribe')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unsubscribe email from status page updates' })
+  @ApiResponse({
+    status: 200,
+    description: 'Unsubscribed successfully',
+    type: ApiResponseDto,
+  })
+  async unsubscribe(
+    @Param('slug') slug: string,
+    @Body('email') email: string,
+  ): Promise<ApiResponseDto<{ message: string }>> {
+    const result = await this.publicStatusService.unsubscribe(slug, email);
+    return ApiResponseDto.success(result, result.message);
   }
 }

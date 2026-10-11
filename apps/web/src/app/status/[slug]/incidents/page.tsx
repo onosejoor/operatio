@@ -19,12 +19,20 @@ export async function generateMetadata({ params }: IncidentsPageProps) {
       notFound();
     }
 
+    const logo = statusPage.statusPage.logo;
+
     return {
       title: `${statusPage.statusPage.name} Incidents`,
       description:
         statusPage.statusPage.description ||
         "Incident history and updates for our services.",
-      logo: statusPage.statusPage.logo || undefined,
+      icons: logo
+        ? {
+            icon: logo,
+            shortcut: logo,
+            apple: logo,
+          }
+        : undefined,
     };
   } catch {
     notFound();
