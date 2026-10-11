@@ -15,19 +15,12 @@ import {
   Search,
   Eye,
   Activity,
-  ChevronDown,
   Send,
 } from "lucide-react";
 import { Card } from "@operatio/ui/components/ui/card";
 import { Badge } from "@operatio/ui/components/ui/badge";
 import { Button } from "@operatio/ui/components/ui/button";
 import { Textarea } from "@operatio/ui/components/ui/textarea";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@operatio/ui/components/ui/dropdown-menu";
 import { cn } from "@operatio/ui/lib/utils";
 import { useState } from "react";
 import { useUpdateIncidentStatus } from "@app/features/monitors/hooks/dashboard-queries";
@@ -162,18 +155,35 @@ function IncidentStatusUpdater({
   currentStatus: string;
 }) {
   const [open, setOpen] = useState(false);
+  const normalizedCurrent = (
+    STATUS_OPTIONS.some((o) => o.value === currentStatus)
+      ? currentStatus
+      : "INVESTIGATING"
+  ) as (typeof STATUS_OPTIONS)[number]["value"];
+
   const [selectedStatus, setSelectedStatus] = useState<
     (typeof STATUS_OPTIONS)[number]["value"]
-  >(currentStatus as (typeof STATUS_OPTIONS)[number]["value"] ?? "INVESTIGATING");
+  >(normalizedCurrent);
   const [message, setMessage] = useState("");
   const mutation = useUpdateIncidentStatus(organizationId);
+
+  const handleOpen = () => {
+    setSelectedStatus(normalizedCurrent);
+    setMessage("");
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setMessage("");
+  };
 
   function handleSubmit() {
     mutation.mutate(
       { incidentId, status: selectedStatus, message: message.trim() || undefined },
       {
         onSuccess: () => {
-          toast.success("Status updated");
+          toast.success(`Incident status updated to ${selectedStatus.toLowerCase()}`);
           setOpen(false);
           setMessage("");
         },
@@ -191,7 +201,7 @@ function IncidentStatusUpdater({
           variant="outline"
           size="sm"
           className="h-7 text-xs gap-1.5"
-          onClick={() => setOpen(true)}
+          onClick={handleOpen}
         >
           <Send className="h-3 w-3" />
           Post status update
@@ -202,29 +212,38 @@ function IncidentStatusUpdater({
 
   return (
     <div className="mt-4 border-t border-border/30 pt-4 space-y-3">
-      <p className="text-xs font-medium text-foreground">Post status update</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-foreground">Post status update</p>
+        <span className="text-[11px] text-muted-foreground">
+          Current: <strong className="text-foreground">{lifecycleLabel(currentStatus)}</strong>
+        </span>
+      </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground shrink-0">Status:</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center gap-1.5 h-7 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              {lifecycleIcon(selectedStatus)}
-              {STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus}
-              <ChevronDown className="h-3 w-3 opacity-60" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            {STATUS_OPTIONS.map((opt) => (
-              <DropdownMenuItem
+      <div className="space-y-1.5">
+        <span className="text-[11px] font-medium text-muted-foreground">
+          Select new status:
+        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {STATUS_OPTIONS.map((opt) => {
+            const isSelected = selectedStatus === opt.value;
+            return (
+              <button
                 key={opt.value}
-                className="text-xs gap-2"
-                onSelect={() => setSelectedStatus(opt.value)}
+                type="button"
+                onClick={() => setSelectedStatus(opt.value)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-all cursor-pointer",
+                  isSelected
+                    ? "bg-foreground text-background border-foreground font-semibold shadow-xs"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted/70 hover:text-foreground",
+                )}
               >
                 {lifecycleIcon(opt.value)}
                 {opt.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <Textarea
@@ -242,13 +261,13 @@ function IncidentStatusUpdater({
           disabled={mutation.isPending}
         >
           <Send className="h-3 w-3" />
-          {mutation.isPending ? "Posting…" : "Post update"}
+          {mutation.isPending ? "Posting…" : `Update to ${lifecycleLabel(selectedStatus)}`}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           className="h-7 text-xs"
-          onClick={() => { setOpen(false); setMessage(""); }}
+          onClick={handleClose}
           disabled={mutation.isPending}
         >
           Cancel
