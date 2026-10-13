@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { API_URL } from './src/lib/config/env'
 
 const RESERVED_SUBDOMAINS = ['www', 'app', 'api', 'docs']
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const configuredRoot = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
   const rootUrl = new URL(
@@ -12,21 +13,51 @@ export function proxy(request: NextRequest) {
   const requestHost = hostname.split(':')[0].toLowerCase()
   const rootHost = rootUrl.hostname.toLowerCase()
 
-  // Only rewrite a single subdomain directly under the configured root domain.
-  if (requestHost === rootHost || !requestHost.endsWith(`.${rootHost}`)) {
+  // The main app and its reserved subdomains use the regular application routes.
+  if (
+    requestHost === rootHost ||
+    requestHost === `www.${rootHost}` ||
+    requestHost === 'localhost'
+  ) {
     return NextResponse.next()
   }
 
-  const subdomain = requestHost.slice(0, -(rootHost.length + 1))
-  if (!subdomain || subdomain.includes('.') || RESERVED_SUBDOMAINS.includes(subdomain)) {
-    return NextResponse.next()
+  // Rewrite a single subdomain directly under the configured root domain.
+  if (requestHost.endsWith(`.${rootHost}`)) {
+    const subdomain = requestHost.slice(0, -(rootHost.length + 1))
+    if (
+      subdomain &&
+      !subdomain.includes('.') &&
+      !RESERVED_SUBDOMAINS.includes(subdomain)
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = `/status/${subdomain}${url.pathname === '/' ? '' : url.pathname}`
+      return NextResponse.rewrite(url)
+    }
   }
 
-  // Rewrite subdomain to status page route
-  const url = request.nextUrl.clone()
-  url.pathname = `/status/${subdomain}`
+  // Custom domains are resolved through the public API. This must live in proxy.ts:
+  // Next.js uses the proxy convention, so middleware.ts is not the active entry point.
+  try {
+    const lookup = await fetch(
+      `${API_URL}/public/status/domain-lookup?domain=${encodeURIComponent(requestHost)}`,
+      { cache: 'no-store' },
+    )
 
-  return NextResponse.rewrite(url)
+    if (lookup.ok) {
+      const json = (await lookup.json()) as { data?: { slug?: string } }
+      const slug = json.data?.slug
+      if (slug) {
+        const url = request.nextUrl.clone()
+        url.pathname = `/status/${slug}${url.pathname === '/' ? '' : url.pathname}`
+        return NextResponse.rewrite(url)
+      }
+    }
+  } catch {
+    // Leave unknown or temporarily unresolved hosts on the normal app route.
+  }
+
+  return NextResponse.next()
 }
 
 export const config = {
