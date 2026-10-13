@@ -19,8 +19,12 @@ import {
   useStatusPage,
   useStatusPageMonitors,
   useUpdateStatusPage,
+  useCustomDomainStatus,
 } from "@app/features/status/hooks/status-pages-queries";
-import type { StatusPageMonitor } from "@app/features/status/api/status-pages";
+import {
+  CustomDomainStatus,
+  type StatusPageMonitor,
+} from "@app/features/status/api/status-pages";
 import { StatusPageDialog } from "@app/features/status/components/create-status-page-dialog";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
@@ -82,6 +86,7 @@ export function StatusPageDetailView({
     (item) => item.slug === orgSlug,
   );
   const page = useStatusPage(organization?.id, statusPageId);
+  const customDomain = useCustomDomainStatus(organization?.id, statusPageId);
   const pageMonitors = useStatusPageMonitors(organization?.id, statusPageId);
   const monitors = useMonitors(organization?.id);
   const addMonitor = useAddStatusPageMonitor(
@@ -195,7 +200,12 @@ export function StatusPageDetailView({
               "Choose which enabled monitors appear on this page."}
           </p>
           <p className="font-mono text-xs text-muted-foreground">
-            {getPublicStatusUrl(page.data.slug)}
+            {getPublicStatusUrl(
+              page.data.slug,
+              customDomain.data?.status === CustomDomainStatus.ACTIVE
+                ? customDomain.data.domain
+                : null,
+            )}
           </p>
         </div>
         <Button variant="outline" onClick={() => setEditOpen(true)}>
@@ -426,7 +436,12 @@ export function StatusPageDetailView({
                 nativeButton={false}
                 render={
                   <a
-                    href={getPublicStatusUrl(page.data.slug)}
+                    href={getPublicStatusUrl(
+                      page.data.slug,
+                      customDomain.data?.status === CustomDomainStatus.ACTIVE
+                        ? customDomain.data.domain
+                        : null,
+                    )}
                     target="_blank"
                     rel="noreferrer"
                   />

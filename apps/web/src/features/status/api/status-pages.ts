@@ -105,8 +105,15 @@ export function updateStatusPage(
   );
 }
 
+export const CustomDomainStatus = {
+  PENDING: "PENDING",
+  PENDING_DNS: "PENDING_DNS",
+  PENDING_SSL: "PENDING_SSL",
+  ACTIVE: "ACTIVE",
+  FAILED: "FAILED",
+} as const;
 export type CustomDomainStatus =
-  "PENDING" | "PENDING_DNS" | "PENDING_SSL" | "ACTIVE" | "FAILED";
+  (typeof CustomDomainStatus)[keyof typeof CustomDomainStatus];
 
 export interface CustomDomain {
   id: string;

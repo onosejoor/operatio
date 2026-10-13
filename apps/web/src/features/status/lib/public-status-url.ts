@@ -1,7 +1,14 @@
 const DEFAULT_ROOT_DOMAIN = "localhost:3000";
 
 /** Build the public status-page address from the configured root domain. */
-export function getPublicStatusUrl(slug: string): string {
+export function getPublicStatusUrl(
+  slug: string,
+  customDomain?: string | null,
+): string {
+  if (customDomain) {
+    return `https://${customDomain}`;
+  }
+
   const configuredRoot =
     process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? DEFAULT_ROOT_DOMAIN;
   const rootUrl = new URL(

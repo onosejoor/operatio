@@ -13,10 +13,14 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useOrganizations } from "@app/features/auth/hooks/auth-queries";
-import type { StatusPageSummary } from "@app/features/status/api/status-pages";
+import {
+  CustomDomainStatus,
+  type StatusPageSummary,
+} from "@app/features/status/api/status-pages";
 import {
   useStatusPages,
   useUpdateStatusPage,
+  useCustomDomainStatus,
 } from "@app/features/status/hooks/status-pages-queries";
 import { StatusPageDialog } from "@app/features/status/components/create-status-page-dialog";
 import { getPublicStatusUrl } from "@app/features/status/lib/public-status-url";
@@ -62,6 +66,13 @@ function StatusPageActions({
   onEdit: (page: StatusPageSummary) => void;
 }) {
   const update = useUpdateStatusPage(organizationId, page.id);
+  const customDomain = useCustomDomainStatus(organizationId, page.id);
+  const publicUrl = getPublicStatusUrl(
+    page.slug,
+    customDomain.data?.status === CustomDomainStatus.ACTIVE
+      ? customDomain.data.domain
+      : null,
+  );
   return (
     <div onClick={(event) => event.stopPropagation()}>
       <DropdownMenu>
@@ -97,13 +108,7 @@ function StatusPageActions({
           {page.isPublic && (
             <DropdownMenuItem
               className="whitespace-nowrap"
-              render={
-                <a
-                  href={getPublicStatusUrl(page.slug)}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
+              render={<a href={publicUrl} target="_blank" rel="noreferrer" />}
             >
               <ExternalLink aria-hidden="true" /> View public page
             </DropdownMenuItem>
@@ -136,6 +141,37 @@ function StatusPageActions({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+function StatusPageAddress({
+  organizationId,
+  page,
+  linked = false,
+}: {
+  organizationId: string;
+  page: StatusPageSummary;
+  linked?: boolean;
+}) {
+  const customDomain = useCustomDomainStatus(organizationId, page.id);
+  const url = getPublicStatusUrl(
+    page.slug,
+    customDomain.data?.status === CustomDomainStatus.ACTIVE
+      ? customDomain.data.domain
+      : null,
+  );
+
+  return linked ? (
+    <a
+      className="font-mono text-xs text-muted-foreground hover:underline"
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {url}
+    </a>
+  ) : (
+    <>{url}</>
   );
 }
 
@@ -199,14 +235,11 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
     {
       header: "Address",
       cell: (page) => (
-        <a
-          className="font-mono text-xs text-muted-foreground hover:underline"
-          href={getPublicStatusUrl(page.slug)}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {getPublicStatusUrl(page.slug)}
-        </a>
+        <StatusPageAddress
+          organizationId={organization.id}
+          page={page}
+          linked
+        />
       ),
     },
     {
@@ -306,7 +339,10 @@ export function StatusPagesView({ orgSlug }: { orgSlug: string }) {
                         {page.name}
                       </CardTitle>
                       <CardDescription className="truncate font-mono text-xs">
-                        {getPublicStatusUrl(page.slug)}
+                        <StatusPageAddress
+                          organizationId={organization.id}
+                          page={page}
+                        />
                       </CardDescription>
                     </div>
                     <StatusPageActions

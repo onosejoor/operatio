@@ -25,6 +25,7 @@ import { getPublicStatusUrl } from "@app/features/status/lib/public-status-url";
 import {
   useCreateStatusPage,
   useUpdateStatusPage,
+  useCustomDomainStatus,
 } from "../hooks/status-pages-queries";
 import type { StatusPageInput, StatusPageSummary } from "../api/status-pages";
 
@@ -52,6 +53,7 @@ export function StatusPageDialog({
 }: StatusPageDialogProps) {
   const create = useCreateStatusPage(organizationId);
   const update = useUpdateStatusPage(organizationId, page?.id ?? "");
+  const customDomain = useCustomDomainStatus(organizationId, page?.id);
   const form = useForm<StatusPageInput>({
     defaultValues: page
       ? {
@@ -221,7 +223,12 @@ export function StatusPageDialog({
                   <FieldDescription>
                     Your customers will visit:{" "}
                     <span className="font-medium text-foreground">
-                      {getPublicStatusUrl(form.watch("slug") || "your-company")}
+                      {getPublicStatusUrl(
+                        form.watch("slug") || "your-company",
+                        customDomain.data?.status === "ACTIVE"
+                          ? customDomain.data.domain
+                          : null,
+                      )}
                     </span>
                   </FieldDescription>
                   {fieldState.invalid && (
