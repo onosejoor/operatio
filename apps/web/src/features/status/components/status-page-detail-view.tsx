@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, Check, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ExternalLink,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useOrganizations } from "@app/features/auth/hooks/auth-queries";
 import { useMonitors } from "@app/features/monitors/hooks/dashboard-queries";
 import type { MonitorSummary } from "@app/features/monitors/api/monitors";
@@ -32,6 +39,7 @@ import { Button } from "@operatio/ui/components/ui/button";
 import { toast } from "@operatio/ui/components/ui/sonner";
 import { MonitorStatusBadge } from "@app/features/monitors/components/monitor-presentational";
 import { getPublicStatusUrl } from "@app/features/status/lib/public-status-url";
+import { CustomDomainPanel } from "@app/features/status/components/custom-domain-panel";
 
 function RemoveStatusMonitorButton({
   organizationId,
@@ -70,16 +78,22 @@ export function StatusPageDetailView({
 }) {
   const organizations = useOrganizations();
   const [editOpen, setEditOpen] = useState(false);
-  const organization = organizations.data?.find((item) => item.slug === orgSlug);
+  const organization = organizations.data?.find(
+    (item) => item.slug === orgSlug,
+  );
   const page = useStatusPage(organization?.id, statusPageId);
   const pageMonitors = useStatusPageMonitors(organization?.id, statusPageId);
   const monitors = useMonitors(organization?.id);
-  const addMonitor = useAddStatusPageMonitor(organization?.id ?? "", statusPageId);
+  const addMonitor = useAddStatusPageMonitor(
+    organization?.id ?? "",
+    statusPageId,
+  );
   const updatePage = useUpdateStatusPage(organization?.id ?? "", statusPageId);
 
   if (
     organizations.isPending ||
-    (organization && (page.isPending || pageMonitors.isPending || monitors.isPending))
+    (organization &&
+      (page.isPending || pageMonitors.isPending || monitors.isPending))
   ) {
     return <LoaderDisplay message="Loading status page" />;
   }
@@ -142,7 +156,10 @@ export function StatusPageDetailView({
     {
       header: "Current status",
       cell: (entry) => (
-        <MonitorStatusBadge status={entry.monitor.status} isActive={entry.monitor.isActive} />
+        <MonitorStatusBadge
+          status={entry.monitor.status}
+          isActive={entry.monitor.isActive}
+        />
       ),
     },
   ];
@@ -153,7 +170,11 @@ export function StatusPageDetailView({
         variant="ghost"
         size="sm"
         nativeButton={false}
-        render={<Link href={`/${encodeURIComponent(orgSlug)}/dashboard/status-pages`} />}
+        render={
+          <Link
+            href={`/${encodeURIComponent(orgSlug)}/dashboard/status-pages`}
+          />
+        }
       >
         <ArrowLeft aria-hidden="true" />
         All status pages
@@ -162,13 +183,16 @@ export function StatusPageDetailView({
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-semibold tracking-tight">{page.data.name}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {page.data.name}
+            </h2>
             <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
               {page.data.isPublic ? "Published" : "Private"}
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {page.data.description || "Choose which enabled monitors appear on this page."}
+            {page.data.description ||
+              "Choose which enabled monitors appear on this page."}
           </p>
           <p className="font-mono text-xs text-muted-foreground">
             {getPublicStatusUrl(page.data.slug)}
@@ -181,38 +205,92 @@ export function StatusPageDetailView({
 
       <ol aria-label="Status page setup" className="grid gap-3 md:grid-cols-3">
         {[
-          { title: "Customize", detail: "Name, address, and brand color", done: true },
-          { title: "Choose monitors", detail: `${attached.length} selected`, done: attached.length > 0 },
-          { title: "Publish", detail: page.data.isPublic ? "Live for visitors" : "Private until ready", done: page.data.isPublic },
+          {
+            title: "Customize",
+            detail: "Name, address, and brand color",
+            done: true,
+          },
+          {
+            title: "Choose monitors",
+            detail: `${attached.length} selected`,
+            done: attached.length > 0,
+          },
+          {
+            title: "Publish",
+            detail: page.data.isPublic
+              ? "Live for visitors"
+              : "Private until ready",
+            done: page.data.isPublic,
+          },
         ].map((step, index) => (
-          <li key={step.title} className="flex items-start gap-3 rounded-xl border bg-card p-4">
-            <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${step.done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-              {step.done ? <Check className="size-4" aria-hidden="true" /> : index + 1}
+          <li
+            key={step.title}
+            className="flex items-start gap-3 rounded-xl border bg-card p-4"
+          >
+            <span
+              className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${step.done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+            >
+              {step.done ? (
+                <Check className="size-4" aria-hidden="true" />
+              ) : (
+                index + 1
+              )}
             </span>
-            <span className="min-w-0"><span className="block text-sm font-medium">{step.title}</span><span className="block truncate text-xs text-muted-foreground">{step.detail}</span></span>
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">{step.title}</span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {step.detail}
+              </span>
+            </span>
           </li>
         ))}
       </ol>
+      <CustomDomainPanel
+        organizationId={organization.id}
+        statusPageId={statusPageId}
+      />
 
       <Card>
         <CardHeader>
           <CardTitle>Step 1 · Customize your page</CardTitle>
-          <CardDescription>Set the public page name, description, URL, and brand color.</CardDescription>
+          <CardDescription>
+            Set the public page name, description, URL, and brand color.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-6 text-sm">
             <div className="flex items-center gap-3">
-              <span className="size-8 rounded-lg border" style={{ backgroundColor: page.data.brandColor ?? "#2563eb" }} aria-label={`Brand color ${page.data.brandColor ?? "#2563eb"}`} />
-              <span><span className="block font-medium">Brand color</span><span className="font-mono text-xs text-muted-foreground">{page.data.brandColor ?? "#2563eb"}</span></span>
+              <span
+                className="size-8 rounded-lg border"
+                style={{ backgroundColor: page.data.brandColor ?? "#2563eb" }}
+                aria-label={`Brand color ${page.data.brandColor ?? "#2563eb"}`}
+              />
+              <span>
+                <span className="block font-medium">Brand color</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {page.data.brandColor ?? "#2563eb"}
+                </span>
+              </span>
             </div>
             {page.data.logo ? (
               <div className="flex items-center gap-3">
-                <img src={page.data.logo} alt="Logo preview" className="size-8 rounded-lg border object-contain p-0.5 bg-background" />
-                <span><span className="block font-medium">Logo</span><span className="truncate max-w-[150px] font-mono text-xs text-muted-foreground block">{page.data.logo}</span></span>
+                <img
+                  src={page.data.logo}
+                  alt="Logo preview"
+                  className="size-8 rounded-lg border object-contain p-0.5 bg-background"
+                />
+                <span>
+                  <span className="block font-medium">Logo</span>
+                  <span className="truncate max-w-[150px] font-mono text-xs text-muted-foreground block">
+                    {page.data.logo}
+                  </span>
+                </span>
               </div>
             ) : null}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil aria-hidden="true" /> Edit page settings</Button>
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil aria-hidden="true" /> Edit page settings
+          </Button>
         </CardContent>
       </Card>
 
@@ -220,8 +298,9 @@ export function StatusPageDetailView({
         <CardHeader>
           <CardTitle>Step 2 · Choose monitors</CardTitle>
           <CardDescription>
-            {attached.length} {attached.length === 1 ? "monitor" : "monitors"} selected.
-            Only enabled monitors allowed on public pages appear to visitors.
+            {attached.length} {attached.length === 1 ? "monitor" : "monitors"}{" "}
+            selected. Only enabled monitors allowed on public pages appear to
+            visitors.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -281,8 +360,8 @@ export function StatusPageDetailView({
         <CardContent>
           {available.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No eligible monitors are available. Enable a monitor and allow it on
-              public status pages to add it here.
+              No eligible monitors are available. Enable a monitor and allow it
+              on public status pages to add it here.
             </p>
           ) : (
             <div className="divide-y rounded-lg border">
@@ -292,7 +371,9 @@ export function StatusPageDetailView({
                   className="flex flex-wrap items-center justify-between gap-3 p-3"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{monitor.name}</p>
+                    <p className="truncate text-sm font-medium">
+                      {monitor.name}
+                    </p>
                     <p className="truncate font-mono text-xs text-muted-foreground">
                       {monitor.url}
                     </p>
@@ -305,7 +386,8 @@ export function StatusPageDetailView({
                       addMonitor.mutate(
                         { monitorId: monitor.id, order: attached.length },
                         {
-                          onSuccess: () => toast.success("Monitor added to status page"),
+                          onSuccess: () =>
+                            toast.success("Monitor added to status page"),
                           onError: (error) => toast.error(error.message),
                         },
                       )
@@ -324,17 +406,65 @@ export function StatusPageDetailView({
       <Card>
         <CardHeader>
           <CardTitle>Step 3 · Publish and preview</CardTitle>
-          <CardDescription>When you publish, visitors can see this page and its selected public monitors.</CardDescription>
+          <CardDescription>
+            When you publish, visitors can see this page and its selected public
+            monitors.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">This page is currently <span className="font-medium text-foreground">{page.data.isPublic ? "published" : "private"}</span>.</p>
+          <p className="text-sm text-muted-foreground">
+            This page is currently{" "}
+            <span className="font-medium text-foreground">
+              {page.data.isPublic ? "published" : "private"}
+            </span>
+            .
+          </p>
           <div className="flex flex-wrap gap-2">
-            {page.data.isPublic && <Button variant="outline" nativeButton={false} render={<a href={getPublicStatusUrl(page.data.slug)} target="_blank" rel="noreferrer" />}><ExternalLink aria-hidden="true" /> Preview public page</Button>}
-            <Button disabled={updatePage.isPending} variant={page.data.isPublic ? "outline" : "default"} onClick={() => updatePage.mutate({ isPublic: !page.data.isPublic }, { onSuccess: () => toast.success(page.data.isPublic ? "Status page unpublished" : "Status page published"), onError: (error) => toast.error(error.message) })}>{page.data.isPublic ? "Unpublish page" : "Publish page"}</Button>
+            {page.data.isPublic && (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={
+                  <a
+                    href={getPublicStatusUrl(page.data.slug)}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                }
+              >
+                <ExternalLink aria-hidden="true" /> Preview public page
+              </Button>
+            )}
+            <Button
+              disabled={updatePage.isPending}
+              variant={page.data.isPublic ? "outline" : "default"}
+              onClick={() =>
+                updatePage.mutate(
+                  { isPublic: !page.data.isPublic },
+                  {
+                    onSuccess: () =>
+                      toast.success(
+                        page.data.isPublic
+                          ? "Status page unpublished"
+                          : "Status page published",
+                      ),
+                    onError: (error) => toast.error(error.message),
+                  },
+                )
+              }
+            >
+              {page.data.isPublic ? "Unpublish page" : "Publish page"}
+            </Button>
           </div>
         </CardContent>
       </Card>
-      <StatusPageDialog key={page.data.id} organizationId={organization.id} page={page.data} open={editOpen} onOpenChange={setEditOpen} />
+      <StatusPageDialog
+        key={page.data.id}
+        organizationId={organization.id}
+        page={page.data}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </div>
   );
 }

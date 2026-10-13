@@ -25,6 +25,19 @@ export const envConfig = {
     apiKey: process.env.SEND_LIB_API_KEY || '',
     from: process.env.SEND_LIB_FROM || 'Operatio <noreply@operatio.dev>',
   },
+  cloudflare: {
+    apiToken: process.env.CLOUDFLARE_API_TOKEN || '',
+    zoneId: process.env.CLOUDFLARE_ZONE_ID || '',
+    fallbackOrigin: process.env.CLOUDFLARE_FALLBACK_ORIGIN || '',
+  },
+  customDomains: {
+    provider: process.env.CUSTOM_DOMAIN_PROVIDER || 'vercel',
+  },
+  vercel: {
+    apiToken: process.env.VERCEL_API_TOKEN || '',
+    projectId: process.env.VERCEL_PROJECT_ID || '',
+    teamId: process.env.VERCEL_TEAM_ID || undefined,
+  },
 };
 
 export type EnvConfig = typeof envConfig;

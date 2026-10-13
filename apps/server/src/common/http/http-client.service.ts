@@ -59,6 +59,15 @@ export class HttpClientService {
     return response.data;
   }
 
+  async delete<TResponse>(
+    url: string,
+    config?: AxiosRequestConfig,
+  ): Promise<TResponse> {
+    const response = await this.client.delete<TResponse>(url, config);
+
+    return response.data;
+  }
+
   private extractProtocol(response: AxiosResponse): string | undefined {
     const httpVersion = response.request?.res?.httpVersion;
     if (httpVersion) {
