@@ -104,3 +104,59 @@ export function updateStatusPage(
     { method: "PATCH", body: JSON.stringify(input) },
   );
 }
+
+export type CustomDomainStatus =
+  "PENDING" | "PENDING_DNS" | "PENDING_SSL" | "ACTIVE" | "FAILED";
+
+export interface CustomDomain {
+  id: string;
+  statusPageId: string;
+  domain: string;
+  status: CustomDomainStatus;
+  provider: "cloudflare" | "vercel";
+  dnsRecords: Array<{
+    type: "A" | "AAAA" | "CNAME" | "TXT";
+    name: string;
+    value: string;
+  }> | null;
+  cfHostnameId: string | null;
+  cnameTarget: string | null;
+  cnameValue: string | null;
+  verifiedAt: string | null;
+  sslIssuedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function setCustomDomain(
+  organizationId: string,
+  statusPageId: string,
+  domain: string,
+) {
+  return apiFetch<ApiResponse<CustomDomain>>(
+    `/organizations/${organizationId}/status-pages/${statusPageId}/custom-domain`,
+    { method: "POST", body: JSON.stringify({ domain }) },
+  ).then((r) => {
+    if (!r.data) throw new Error("Failed to connect custom domain");
+    return r.data;
+  });
+}
+
+export function removeCustomDomain(
+  organizationId: string,
+  statusPageId: string,
+) {
+  return apiFetch<ApiResponse<void>>(
+    `/organizations/${organizationId}/status-pages/${statusPageId}/custom-domain`,
+    { method: "DELETE" },
+  );
+}
+
+export function getCustomDomainStatus(
+  organizationId: string,
+  statusPageId: string,
+) {
+  return apiFetch<ApiResponse<CustomDomain | null>>(
+    `/organizations/${organizationId}/status-pages/${statusPageId}/custom-domain/status`,
+  ).then((r) => r.data ?? null);
+}

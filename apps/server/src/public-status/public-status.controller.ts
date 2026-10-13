@@ -4,12 +4,14 @@ import {
   Post,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PublicStatusService } from './public-status.service';
+import { CustomDomainService } from '../status-pages/custom-domain.service';
 import {
   PublicStatusResponseDto,
   MetricsResponseDto,
@@ -19,7 +21,24 @@ import { ApiResponseDto } from '@/common/dto/api-response.dto';
 @ApiTags('public-status')
 @Controller('public/status')
 export class PublicStatusController {
-  constructor(private readonly publicStatusService: PublicStatusService) {}
+  constructor(
+    private readonly publicStatusService: PublicStatusService,
+    private readonly customDomainService: CustomDomainService,
+  ) {}
+
+  @Get('domain-lookup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resolve a custom domain to a status page slug (used by middleware)' })
+  @ApiResponse({ status: 200, description: 'Slug found', type: ApiResponseDto })
+  @ApiResponse({ status: 404, description: 'Domain not found or not active' })
+  async domainLookup(
+    @Query('domain') domain: string,
+  ): Promise<ApiResponseDto<{ slug: string }>> {
+    if (!domain) throw new NotFoundException('domain query param required');
+    const slug = await this.customDomainService.findSlugByDomain(domain);
+    if (!slug) throw new NotFoundException('Domain not found');
+    return ApiResponseDto.success({ slug });
+  }
 
   @Get(':slug')
   @HttpCode(HttpStatus.OK)

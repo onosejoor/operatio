@@ -86,6 +86,19 @@ enum OutboxStatus {
   FAILED
 }
 
+enum CustomDomainStatus {
+  PENDING
+  PENDING_DNS
+  PENDING_SSL
+  ACTIVE
+  FAILED
+}
+
+enum CustomDomainProvider {
+  CLOUDFLARE @map("cloudflare")
+  VERCEL     @map("vercel")
+}
+
 model User {
   id                         String    @id @default(auto()) @map("_id") @db.ObjectId
   email                      String    @unique
@@ -110,10 +123,10 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships Membership[]
-  monitors    Monitor[]
-  incidents   Incident[]
-  statusPages StatusPage[]
+  memberships        Membership[]
+  monitors           Monitor[]
+  incidents          Incident[]
+  statusPages        StatusPage[]
   maintenanceWindows MaintenanceWindow[]
 
   @@map("organizations")
@@ -306,13 +319,35 @@ model StatusPage {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   statusPageMonitors StatusPageMonitor[]
   maintenanceWindows MaintenanceWindow[]
   subscribers        StatusPageSubscriber[]
+  customDomain       CustomDomain?
 
   @@index([organizationId])
   @@map("status_pages")
+}
+
+model CustomDomain {
+  id               String               @id @default(auto()) @map("_id") @db.ObjectId
+  statusPageId     String               @unique @db.ObjectId
+  domain           String               @unique
+  status           CustomDomainStatus   @default(PENDING)
+  provider         CustomDomainProvider @default(CLOUDFLARE)
+  providerDomainId String?
+  dnsRecords       Json?
+  cfHostnameId     String?
+  cnameTarget      String?
+  cnameValue       String?
+  verifiedAt       DateTime?
+  sslIssuedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+
+  @@map("custom_domains")
 }
 
 model StatusPageSubscriber {

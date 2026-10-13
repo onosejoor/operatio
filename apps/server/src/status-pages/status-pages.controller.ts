@@ -19,12 +19,17 @@ import { CreateStatusPageDto } from './dto/create-status-page.dto';
 import { UpdateStatusPageDto } from './dto/update-status-page.dto';
 import { AddMonitorToStatusPageDto } from './dto/add-monitor.dto';
 import { StatusPagesService } from './status-pages.service';
+import { CustomDomainService } from './custom-domain.service';
+import { SetCustomDomainDto } from './dto/set-custom-domain.dto';
 
 @ApiTags('status-pages')
 @Controller('organizations/:organizationId/status-pages')
 @UseGuards(JwtCookieAuthGuard, OrganizationMembershipGuard)
 export class StatusPagesController {
-  constructor(private readonly statusPagesService: StatusPagesService) {}
+  constructor(
+    private readonly statusPagesService: StatusPagesService,
+    private readonly customDomainService: CustomDomainService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -62,7 +67,10 @@ export class StatusPagesController {
       organizationId,
       createStatusPageDto,
     );
-    return ApiResponseDto.success(result.id, 'Status page created successfully');
+    return ApiResponseDto.success(
+      result.id,
+      'Status page created successfully',
+    );
   }
 
   @Get()
@@ -121,7 +129,10 @@ export class StatusPagesController {
       statusPageId,
       updateStatusPageDto,
     );
-    return ApiResponseDto.success(result.id, 'Status page updated successfully');
+    return ApiResponseDto.success(
+      result.id,
+      'Status page updated successfully',
+    );
   }
 
   @Delete(':statusPageId')
@@ -205,5 +216,51 @@ export class StatusPagesController {
       body.order,
     );
     return ApiResponseDto.success(undefined, 'Monitor order updated');
+  }
+
+  @Post(':statusPageId/custom-domain')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Connect a custom domain to a status page' })
+  @ApiResponse({ status: 201, type: ApiResponseDto })
+  @ApiBody({ type: SetCustomDomainDto })
+  async setCustomDomain(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+    @Body() dto: SetCustomDomainDto,
+  ) {
+    const result = await this.customDomainService.setCustomDomain(
+      organizationId,
+      statusPageId,
+      dto,
+    );
+    return ApiResponseDto.success(result, 'Custom domain connected');
+  }
+
+  @Get(':statusPageId/custom-domain/status')
+  @ApiOperation({ summary: 'Get and refresh custom domain status' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async getCustomDomainStatus(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+  ) {
+    const result = await this.customDomainService.refreshStatus(
+      organizationId,
+      statusPageId,
+    );
+    return ApiResponseDto.success(result);
+  }
+
+  @Delete(':statusPageId/custom-domain')
+  @ApiOperation({ summary: 'Remove custom domain from a status page' })
+  @ApiResponse({ status: 200, type: ApiResponseDto })
+  async removeCustomDomain(
+    @CurrentOrganizationId() organizationId: string,
+    @Param('statusPageId') statusPageId: string,
+  ) {
+    await this.customDomainService.removeCustomDomain(
+      organizationId,
+      statusPageId,
+    );
+    return ApiResponseDto.success(undefined, 'Custom domain removed');
   }
 }

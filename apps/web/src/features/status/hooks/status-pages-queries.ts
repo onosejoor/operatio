@@ -9,6 +9,9 @@ import {
   getStatusPages,
   removeStatusPageMonitor,
   updateStatusPage,
+  getCustomDomainStatus,
+  removeCustomDomain,
+  setCustomDomain,
   type StatusPageInput,
 } from "../api/status-pages";
 
@@ -109,5 +112,56 @@ export function useRemoveStatusPageMonitor(
         queryKey: statusPageKeys.monitors(organizationId, statusPageId),
       });
     },
+  });
+}
+
+export const customDomainKeys = {
+  status: (organizationId: string, statusPageId: string) =>
+    ["custom-domain", organizationId, statusPageId] as const,
+};
+
+export function useCustomDomainStatus(
+  organizationId?: string,
+  statusPageId?: string,
+) {
+  return useQuery({
+    queryKey: customDomainKeys.status(organizationId ?? "", statusPageId ?? ""),
+    queryFn: () => getCustomDomainStatus(organizationId!, statusPageId!),
+    enabled: !!organizationId && !!statusPageId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "PENDING" || status === "PENDING_DNS" || status === "PENDING_SSL"
+        ? 10_000
+        : false;
+    },
+  });
+}
+
+export function useSetCustomDomain(
+  organizationId: string,
+  statusPageId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (domain: string) =>
+      setCustomDomain(organizationId, statusPageId, domain),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: customDomainKeys.status(organizationId, statusPageId),
+      }),
+  });
+}
+
+export function useRemoveCustomDomain(
+  organizationId: string,
+  statusPageId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => removeCustomDomain(organizationId, statusPageId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: customDomainKeys.status(organizationId, statusPageId),
+      }),
   });
 }
