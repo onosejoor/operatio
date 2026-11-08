@@ -158,13 +158,34 @@ export class PublicStatusService {
 
     const monitorIds = statusPageMonitors.map((spm) => spm.monitorId);
 
-    if (monitorIds.length === 0) {
+    // Look up org for this status page so we can include org-level custom incidents
+    const statusPage = await this.prisma.statusPage.findUnique({
+      where: { id: statusPageId },
+      select: { organizationId: true },
+    });
+
+    // Build OR conditions:
+    //  1. Incidents linked to monitors on this page
+    //  2. Public custom incidents with no monitor (org-wide)
+    const orConditions: object[] = [];
+    if (monitorIds.length > 0) {
+      orConditions.push({ monitorId: { in: monitorIds } });
+    }
+    if (statusPage) {
+      orConditions.push({
+        organizationId: statusPage.organizationId,
+        monitorId: null,
+      });
+    }
+
+    if (orConditions.length === 0) {
       return [];
     }
 
     const incidents = await this.prisma.incident.findMany({
       where: {
-        monitorId: { in: monitorIds },
+        isInternal: false,
+        OR: orConditions,
       },
       select: {
         id: true,
@@ -196,7 +217,7 @@ export class PublicStatusService {
       status: incident.resolvedAt ? 'resolved' : 'active',
       incidentStatus: incident.status,
       title: incident.title ?? undefined,
-      monitorName: incident.monitor.name,
+      monitorName: incident.monitor?.name ?? 'System',
       severity: incident.severity ?? undefined,
       publicMessage: incident.publicMessage ?? undefined,
       startedAt: incident.detectedAt.toISOString(),
@@ -506,6 +527,7 @@ export class PublicStatusService {
     const incidents = await this.prisma.incident.findMany({
       where: {
         monitorId: { in: monitorIds },
+        isInternal: false,
         detectedAt: { gte: oneHourAgo },
       },
       select: {

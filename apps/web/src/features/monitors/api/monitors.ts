@@ -71,7 +71,7 @@ export type MonitorCheckSort = "newest" | "oldest" | "slowest";
 export type MonitorCheckStatus = MonitorSummary["status"];
 
 export interface IncidentSummary extends PublicIncident {
-  monitorId: string;
+  monitorId?: string;
   organizationId: string;
   monitorName: string;
 }
@@ -181,6 +181,28 @@ export function updateIncidentStatus(
     `/organizations/${organizationId}/incidents/${incidentId}/status`,
     {
       method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  ).then((response) => response.data);
+}
+
+export interface CreateIncidentInput {
+  title: string;
+  message?: string;
+  severity?: 'MINOR' | 'MAJOR' | 'CRITICAL';
+  status?: IncidentStatus;
+  monitorId?: string;
+  isInternal?: boolean;
+}
+
+export function createIncident(
+  organizationId: string,
+  input: CreateIncidentInput,
+) {
+  return apiFetch<ApiResponse<IncidentSummary>>(
+    `/organizations/${organizationId}/incidents`,
+    {
+      method: 'POST',
       body: JSON.stringify(input),
     },
   ).then((response) => response.data);

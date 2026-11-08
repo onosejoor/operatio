@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Body,
   Param,
@@ -15,6 +16,7 @@ import { JwtCookieAuthGuard } from '../common/guards/jwt/jwt-cookie-auth.guard';
 import { CurrentOrganizationId } from '../organizations/decorators/current-organization-id.decorator';
 import { IncidentsService } from './incidents.service';
 import { IncidentStatus } from '@prisma/client';
+import { CreateIncidentDto } from './dto/create-incident.dto';
 
 @ApiTags('incidents')
 @Controller('organizations/:organizationId/monitors/:monitorId/incidents')
@@ -60,6 +62,19 @@ export class OrganizationIncidentsController {
         query.page,
         query.limit,
       ),
+    );
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a custom/manual incident' })
+  @ApiResponse({ status: 201, type: ApiResponseDto })
+  async createIncident(
+    @CurrentOrganizationId() organizationId: string,
+    @Body() body: CreateIncidentDto,
+  ) {
+    return ApiResponseDto.success(
+      await this.incidentsService.createCustomIncident(organizationId, body),
+      'Incident created successfully',
     );
   }
 

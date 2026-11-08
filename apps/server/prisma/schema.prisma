@@ -264,7 +264,9 @@ model AssertionResult {
 
 model Incident {
   id             String            @id @default(auto()) @map("_id") @db.ObjectId
-  monitorId      String            @db.ObjectId
+  monitorId      String?           @db.ObjectId
+  isInternal     Boolean           @default(false)
+  isCustom       Boolean           @default(false)
   organizationId String            @db.ObjectId
   publicId       String            @unique
   title          String?
@@ -281,7 +283,7 @@ model Incident {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  monitor      Monitor         @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  monitor      Monitor?        @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   events       IncidentEvent[]
 

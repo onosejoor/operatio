@@ -161,9 +161,8 @@ function IncidentStatusUpdater({
       : "INVESTIGATING"
   ) as (typeof STATUS_OPTIONS)[number]["value"];
 
-  const [selectedStatus, setSelectedStatus] = useState<
-    (typeof STATUS_OPTIONS)[number]["value"]
-  >(normalizedCurrent);
+  const [selectedStatus, setSelectedStatus] =
+    useState<(typeof STATUS_OPTIONS)[number]["value"]>(normalizedCurrent);
   const [message, setMessage] = useState("");
   const mutation = useUpdateIncidentStatus(organizationId);
 
@@ -180,10 +179,16 @@ function IncidentStatusUpdater({
 
   function handleSubmit() {
     mutation.mutate(
-      { incidentId, status: selectedStatus, message: message.trim() || undefined },
+      {
+        incidentId,
+        status: selectedStatus,
+        message: message.trim() || undefined,
+      },
       {
         onSuccess: () => {
-          toast.success(`Incident status updated to ${selectedStatus.toLowerCase()}`);
+          toast.success(
+            `Incident status updated to ${selectedStatus.toLowerCase()}`,
+          );
           setOpen(false);
           setMessage("");
         },
@@ -213,9 +218,14 @@ function IncidentStatusUpdater({
   return (
     <div className="mt-4 border-t border-border/30 pt-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-foreground">Post status update</p>
+        <p className="text-xs font-semibold text-foreground">
+          Post status update
+        </p>
         <span className="text-[11px] text-muted-foreground">
-          Current: <strong className="text-foreground">{lifecycleLabel(currentStatus)}</strong>
+          Current:{" "}
+          <strong className="text-foreground">
+            {lifecycleLabel(currentStatus)}
+          </strong>
         </span>
       </div>
 
@@ -261,7 +271,9 @@ function IncidentStatusUpdater({
           disabled={mutation.isPending}
         >
           <Send className="h-3 w-3" />
-          {mutation.isPending ? "Posting…" : `Update to ${lifecycleLabel(selectedStatus)}`}
+          {mutation.isPending
+            ? "Posting…"
+            : `Update to ${lifecycleLabel(selectedStatus)}`}
         </Button>
         <Button
           variant="ghost"
@@ -337,6 +349,14 @@ export function ActiveIncidents({
                   </Badge>
 
                   {/* Severity badge */}
+                  {incident.isInternal && (
+                    <Badge
+                      variant="secondary"
+                      className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-amber-500/30 text-amber-500 bg-amber-500/10"
+                    >
+                      Internal
+                    </Badge>
+                  )}
                   {sev && (
                     <Badge
                       variant={severityVariant(incident.severity)}

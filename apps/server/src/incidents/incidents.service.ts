@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../database/database.service';
-import { IncidentStatus } from '@prisma/client';
+import { IncidentSeverity, IncidentStatus } from '@prisma/client';
+import { CreateIncidentDto } from './dto/create-incident.dto';
+import { PRISMA_TRANSACTION_TIMEOUT } from '@/constants';
 
 @Injectable()
 export class IncidentsService {
@@ -18,6 +21,8 @@ export class IncidentsService {
     detectedAt: true,
     resolvedAt: true,
     durationMs: true,
+    isInternal: true,
+    isCustom: true,
     monitor: { select: { name: true } },
     events: {
       select: { type: true, status: true, message: true, createdAt: true },
@@ -27,7 +32,7 @@ export class IncidentsService {
 
   private toIncidentResponse(incident: {
     id: string;
-    monitorId: string;
+    monitorId: string | null;
     organizationId: string;
     publicId: string;
     title: string | null;
@@ -37,7 +42,9 @@ export class IncidentsService {
     detectedAt: Date;
     resolvedAt: Date | null;
     durationMs: number | null;
-    monitor: { name: string };
+    isInternal?: boolean;
+    isCustom?: boolean;
+    monitor?: { name: string } | null;
     events: Array<{
       type: string;
       status: string | null;
@@ -47,15 +54,17 @@ export class IncidentsService {
   }) {
     return {
       id: incident.id,
-      monitorId: incident.monitorId,
+      monitorId: incident.monitorId ?? undefined,
       organizationId: incident.organizationId,
-      monitorName: incident.monitor.name,
+      monitorName: incident.monitor?.name ?? 'Internal / General',
       publicId: incident.publicId,
       title: incident.title ?? undefined,
       status: incident.resolvedAt ? 'resolved' : 'active',
       incidentStatus: incident.status,
       severity: incident.severity ?? undefined,
       publicMessage: incident.publicMessage ?? undefined,
+      isInternal: incident.isInternal ?? false,
+      isCustom: incident.isCustom ?? false,
       startedAt: incident.detectedAt.toISOString(),
       resolvedAt: incident.resolvedAt?.toISOString(),
       duration: incident.resolvedAt
@@ -65,12 +74,13 @@ export class IncidentsService {
           )
         : undefined,
       durationMs: incident.durationMs ?? undefined,
-      events: incident.events.map((event) => ({
-        type: event.type,
-        status: event.status ?? undefined,
-        message: event.message ?? undefined,
-        createdAt: event.createdAt.toISOString(),
-      })),
+      events:
+        incident.events?.map((event) => ({
+          type: event.type,
+          status: event.status ?? undefined,
+          message: event.message ?? undefined,
+          createdAt: event.createdAt.toISOString(),
+        })) ?? [],
     };
   }
 
@@ -149,10 +159,7 @@ export class IncidentsService {
 
   async getIncidentById(organizationId: string, incidentId: string) {
     const incident = await this.prisma.incident.findFirst({
-      where: {
-        id: incidentId,
-        organizationId,
-      },
+      where: { id: incidentId, organizationId },
       select: this.selectFields,
     });
 
@@ -161,6 +168,59 @@ export class IncidentsService {
     }
 
     return this.toIncidentResponse(incident);
+  }
+
+  async createCustomIncident(organizationId: string, dto: CreateIncidentDto) {
+    if (dto.monitorId) {
+      const monitor = await this.prisma.monitor.findFirst({
+        where: { id: dto.monitorId, organizationId },
+        select: { id: true, name: true },
+      });
+      if (!monitor) {
+        throw new NotFoundException('Monitor not found');
+      }
+    }
+
+    const publicId = randomUUID();
+    const isResolved = dto.status === IncidentStatus.RESOLVED;
+    const now = new Date();
+
+    const incident = await this.prisma.$transaction(
+      async (tx) => {
+        const created = await tx.incident.create({
+          data: {
+            organizationId,
+            monitorId: dto.monitorId ?? null,
+            title: dto.title,
+            status: dto.status ?? IncidentStatus.INVESTIGATING,
+            severity: dto.severity ?? IncidentSeverity.MINOR,
+            isInternal: dto.isInternal ?? false,
+            isCustom: true,
+            publicId,
+            publicMessage: dto.message ?? null,
+            summary: dto.message ?? null,
+            detectedAt: now,
+            ...(isResolved ? { resolvedAt: now, durationMs: 0 } : {}),
+          },
+        });
+
+        await tx.incidentEvent.create({
+          data: {
+            incidentId: created.id,
+            type: 'STATUS_UPDATE',
+            status: dto.status ?? IncidentStatus.INVESTIGATING,
+            message:
+              dto.message ||
+              `Incident created with status ${(dto.status ?? IncidentStatus.INVESTIGATING).toLowerCase()}`,
+          },
+        });
+
+        return;
+      },
+      { timeout: PRISMA_TRANSACTION_TIMEOUT },
+    );
+
+    return { message: 'Incident created successfully' };
   }
 
   async updateIncidentStatus(

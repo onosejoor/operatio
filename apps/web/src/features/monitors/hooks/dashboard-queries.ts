@@ -9,6 +9,8 @@ import {
   getMonitorStats,
   getMonitors,
   type CreateMonitorInput,
+  type CreateIncidentInput,
+  createIncident,
   type MonitorCheckSort,
   type MonitorSummary,
   type UpdateMonitorInput,
@@ -156,6 +158,20 @@ export function useUpdateIncidentStatus(organizationId: string) {
       status: IncidentStatus;
       message?: string;
     }) => updateIncidentStatus(organizationId, incidentId, { status, message }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: monitorKeys.incidents(organizationId),
+      });
+    },
+  });
+}
+
+export function useCreateIncident(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateIncidentInput) =>
+      createIncident(organizationId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: monitorKeys.incidents(organizationId),

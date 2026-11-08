@@ -154,11 +154,11 @@ export class IncidentConsumer {
         ownerEmails.map((to) =>
           this.notificationService.sendEmail({
             to,
-            subject: `[Operatio] Incident: ${incident.title || incident.monitor.name}`,
+            subject: `[Operatio] Incident: ${incident.title || incident.monitor?.name || "Service"}`,
             template: 'incident-created',
             context: {
               organizationName: incident.organization.name,
-              monitorName: incident.monitor.name,
+              monitorName: incident.monitor?.name || "Service",
               incidentTitle: incident.title || 'Service incident detected',
               severity: incident.severity || 'Unspecified',
               summary:
@@ -185,11 +185,11 @@ export class IncidentConsumer {
               subscriberTasks.push(
                 this.notificationService.sendEmail({
                   to: sub.email,
-                  subject: `[${spm.statusPage.name}] Incident: ${incident.title || incident.monitor.name}`,
+                  subject: `[${spm.statusPage.name}] Incident: ${incident.title || incident.monitor?.name || "Service"}`,
                   template: 'incident-created',
                   context: {
                     organizationName: spm.statusPage.name,
-                    monitorName: incident.monitor.name,
+                    monitorName: incident.monitor?.name || "Service",
                     incidentTitle: incident.title || 'Service incident detected',
                     severity: incident.severity || 'Unspecified',
                     summary:

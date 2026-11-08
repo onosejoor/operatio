@@ -67,6 +67,8 @@ export interface PublicIncident {
   /** Duration in milliseconds (stored by backend on resolve) */
   durationMs?: number;
   publicId?: string;
+  isInternal?: boolean;
+  isCustom?: boolean;
   events?: PublicIncidentEvent[];
 }
 

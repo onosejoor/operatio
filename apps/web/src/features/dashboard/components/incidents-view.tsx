@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useOrganizations } from "@app/features/auth/hooks/auth-queries";
-import { Activity, AlertTriangle, CheckCircle2, Siren } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Siren, Plus } from "lucide-react";
 import { useOrganizationIncidents } from "@app/features/monitors/hooks/dashboard-queries";
 import {
   ActiveIncidents,
@@ -9,6 +10,7 @@ import {
 } from "@app/features/status/components/incident-timeline";
 import { ErrorDisplay } from "@operatio/ui/components/error-display";
 import { LoaderDisplay } from "@operatio/ui/components/loader-display";
+import { Button } from "@operatio/ui/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,8 +18,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@operatio/ui/components/ui/card";
+import { CreateIncidentDialog } from "./create-incident-dialog";
 
 export function IncidentsView({ orgSlug }: { orgSlug: string }) {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const organizations = useOrganizations();
   const organization = organizations.data?.find((item) => item.slug === orgSlug);
   const incidentsQuery = useOrganizationIncidents(organization?.id);
@@ -90,11 +94,20 @@ export function IncidentsView({ orgSlug }: { orgSlug: string }) {
 
   return (
     <main className="mx-auto max-w-5xl space-y-8">
-      <header className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">Incidents</h2>
-        <p className="text-sm text-muted-foreground">
-          Incident updates and history for {organization.name}.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Incidents</h2>
+          <p className="text-sm text-muted-foreground">
+            Incident updates, internal issues, and history for {organization.name}.
+          </p>
+        </div>
+        <Button
+          onClick={() => setCreateDialogOpen(true)}
+          className="gap-1.5 self-start sm:self-auto"
+        >
+          <Plus className="h-4 w-4" />
+          Report Incident
+        </Button>
       </header>
 
       <section
@@ -160,6 +173,12 @@ export function IncidentsView({ orgSlug }: { orgSlug: string }) {
           <IncidentHistory incidents={resolvedIncidents} />
         )}
       </section>
+
+      <CreateIncidentDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        organizationId={organization.id}
+      />
     </main>
   );
 }
