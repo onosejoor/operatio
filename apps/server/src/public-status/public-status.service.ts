@@ -158,7 +158,14 @@ export class PublicStatusService {
 
     const monitorIds = statusPageMonitors.map((spm) => spm.monitorId);
 
-    // Look up org for this status page so we can include org-level custom incidents
+    // Find explicitly linked custom incidents for this status page
+    const incidentStatusPages = await this.prisma.incidentStatusPage.findMany({
+      where: { statusPageId },
+      select: { incidentId: true },
+    });
+    const explicitIncidentIds = incidentStatusPages.map((isp) => isp.incidentId);
+
+    // Look up org for this status page
     const statusPage = await this.prisma.statusPage.findUnique({
       where: { id: statusPageId },
       select: { organizationId: true },
@@ -166,15 +173,20 @@ export class PublicStatusService {
 
     // Build OR conditions:
     //  1. Incidents linked to monitors on this page
-    //  2. Public custom incidents with no monitor (org-wide)
+    //  2. Incidents explicitly targeted to this status page
+    //  3. General org custom incidents with no monitor and NO specific status page assignments (broadcast)
     const orConditions: object[] = [];
     if (monitorIds.length > 0) {
       orConditions.push({ monitorId: { in: monitorIds } });
+    }
+    if (explicitIncidentIds.length > 0) {
+      orConditions.push({ id: { in: explicitIncidentIds } });
     }
     if (statusPage) {
       orConditions.push({
         organizationId: statusPage.organizationId,
         monitorId: null,
+        incidentStatusPages: { none: {} },
       });
     }
 

@@ -20,11 +20,21 @@ import {
   SelectValue,
 } from "@operatio/ui/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@operatio/ui/components/ui/dropdown-menu";
+import {
   useCreateIncident,
   useMonitors,
 } from "@app/features/monitors/hooks/dashboard-queries";
+import { useStatusPages } from "@app/features/status/hooks/status-pages-queries";
 import { toast } from "sonner";
-import { Lock, Globe } from "lucide-react";
+import { Lock, Globe, ChevronsUpDown } from "lucide-react";
 
 interface CreateIncidentDialogProps {
   open: boolean;
@@ -45,9 +55,19 @@ export function CreateIncidentDialog({
   >("INVESTIGATING");
   const [monitorId, setMonitorId] = useState<string>("none");
   const [isInternal, setIsInternal] = useState(true);
+  const [selectedStatusPageIds, setSelectedStatusPageIds] = useState<string[]>([]);
 
   const monitorsQuery = useMonitors(organizationId);
+  const statusPagesQuery = useStatusPages(organizationId);
   const createMutation = useCreateIncident(organizationId);
+
+  const statusPages = statusPagesQuery.data ?? [];
+
+  const toggleStatusPage = (id: string) => {
+    setSelectedStatusPageIds((prev) =>
+      prev.includes(id) ? prev.filter((pId) => pId !== id) : [...prev, id],
+    );
+  };
 
   const resetForm = () => {
     setTitle("");
@@ -56,6 +76,7 @@ export function CreateIncidentDialog({
     setStatus("INVESTIGATING");
     setMonitorId("none");
     setIsInternal(true);
+    setSelectedStatusPageIds([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,11 +94,13 @@ export function CreateIncidentDialog({
         status,
         monitorId: monitorId === "none" ? undefined : monitorId,
         isInternal,
+        statusPageIds:
+          !isInternal && selectedStatusPageIds.length > 0
+            ? selectedStatusPageIds
+            : undefined,
       });
 
-      toast.success(
-        isInternal ? "Issue reported" : "Incident published",
-      );
+      toast.success(isInternal ? "Issue reported" : "Incident published");
       resetForm();
       onOpenChange(false);
     } catch (err: unknown) {
@@ -86,6 +109,14 @@ export function CreateIncidentDialog({
       toast.error(errMessage);
     }
   };
+
+  const targetPagesLabel =
+    selectedStatusPageIds.length === 0
+      ? "All status pages"
+      : selectedStatusPageIds.length === 1
+        ? statusPages.find((p) => p.id === selectedStatusPageIds[0])?.name ??
+          "1 selected"
+        : `${selectedStatusPageIds.length} status pages selected`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,6 +169,40 @@ export function CreateIncidentDialog({
             </div>
           </div>
 
+          {/* Target Status Pages Multi-Select (shadcn DropdownMenu with CheckboxItems) */}
+          {!isInternal && statusPages.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Target status pages</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs hover:bg-accent hover:text-accent-foreground font-normal">
+                  <span className="truncate">{targetPagesLabel}</span>
+                  <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-2" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[--anchor-width]">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+                      Select target pages (leave empty for all)
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {statusPages.map((page) => {
+                      const isChecked = selectedStatusPageIds.includes(page.id);
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={page.id}
+                          checked={isChecked}
+                          onCheckedChange={() => toggleStatusPage(page.id)}
+                          className="text-xs"
+                        >
+                          {page.name}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
           {/* Severity & Status */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -164,7 +229,13 @@ export function CreateIncidentDialog({
               <Select
                 value={status}
                 onValueChange={(val) =>
-                  setStatus(val as "INVESTIGATING" | "IDENTIFIED" | "MONITORING" | "RESOLVED")
+                  setStatus(
+                    val as
+                      | "INVESTIGATING"
+                      | "IDENTIFIED"
+                      | "MONITORING"
+                      | "RESOLVED",
+                  )
                 }
               >
                 <SelectTrigger>

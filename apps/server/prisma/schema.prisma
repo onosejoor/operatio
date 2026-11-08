@@ -283,9 +283,10 @@ model Incident {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  monitor      Monitor?        @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  events       IncidentEvent[]
+  monitor             Monitor?               @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  organization        Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events              IncidentEvent[]
+  incidentStatusPages IncidentStatusPage[]
 
   @@index([monitorId])
   @@index([organizationId])
@@ -322,8 +323,9 @@ model StatusPage {
   updatedAt      DateTime @updatedAt
 
   organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  statusPageMonitors StatusPageMonitor[]
-  maintenanceWindows MaintenanceWindow[]
+  statusPageMonitors  StatusPageMonitor[]
+  maintenanceWindows  MaintenanceWindow[]
+  incidentStatusPages IncidentStatusPage[]
   subscribers        StatusPageSubscriber[]
   customDomain       CustomDomain?
 
@@ -429,4 +431,16 @@ model OutboxEvent {
 
   @@index([status, availableAt])
   @@map("outbox_events")
+}
+
+model IncidentStatusPage {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  incidentId   String @db.ObjectId
+  statusPageId String @db.ObjectId
+
+  incident   Incident   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, statusPageId])
+  @@map("incident_status_pages")
 }

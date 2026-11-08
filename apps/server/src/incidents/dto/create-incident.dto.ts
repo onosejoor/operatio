@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -55,4 +56,14 @@ export class CreateIncidentDto {
   @IsBoolean()
   @IsOptional()
   isInternal?: boolean = false;
+
+  @ApiPropertyOptional({
+    description:
+      'List of status page IDs this incident should appear on. If empty and not internal, appears on all org status pages.',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  statusPageIds?: string[];
 }

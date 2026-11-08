@@ -215,7 +215,16 @@ export class IncidentsService {
           },
         });
 
-        return;
+        if (dto.statusPageIds && dto.statusPageIds.length > 0) {
+          await tx.incidentStatusPage.createMany({
+            data: dto.statusPageIds.map((statusPageId) => ({
+              incidentId: created.id,
+              statusPageId,
+            })),
+          });
+        }
+
+        return created;
       },
       { timeout: PRISMA_TRANSACTION_TIMEOUT },
     );

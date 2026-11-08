@@ -193,6 +193,7 @@ export interface CreateIncidentInput {
   status?: IncidentStatus;
   monitorId?: string;
   isInternal?: boolean;
+  statusPageIds?: string[];
 }
 
 export function createIncident(
